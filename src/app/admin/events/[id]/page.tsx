@@ -6,6 +6,7 @@ import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
 import { ManageCandidatesForm } from "@/components/admin/manage-candidates-form";
+import { CandidatePhotoUpload } from "@/components/admin/candidate-photo-upload";
 
 export default async function AdminEventDetailPage(props: PageProps<"/admin/events/[id]">) {
   const { id } = await props.params;
@@ -96,11 +97,19 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
           {event.categories.map((category) => (
             <div key={category.id}>
               <p className="text-sm font-medium">{category.name}</p>
-              <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+              <ul className="mt-2 flex flex-col gap-2">
                 {category.candidates.map((candidate) => (
-                  <li key={candidate.id}>
-                    #{candidate.candidateNumber} {candidate.fullName}
-                    {!candidate.isActive && " (inactive)"}
+                  <li key={candidate.id} className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      #{candidate.candidateNumber} {candidate.fullName}
+                      {!candidate.isActive && " (inactive)"}
+                    </span>
+                    {can("MANAGE_CANDIDATES_LIMITED") && event.state !== "FINALIZED" && (
+                      <CandidatePhotoUpload
+                        candidateId={candidate.id}
+                        currentPhotoUrl={candidate.photoUrl}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>

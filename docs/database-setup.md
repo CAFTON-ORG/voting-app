@@ -9,6 +9,17 @@ This doc now covers what's still outstanding rather than initial setup.
 - All migrations applied, including RLS (default-deny) and `cast_ballot()`.
 - Dev seed data loaded (`dev-test-event`).
 
+## Migration workflow note
+
+Any migration referencing Supabase-managed schemas (`storage.*`, `auth.*`
+— e.g. the Storage bucket migration) fails Prisma's normal `migrate dev`
+shadow-database validation, because the throwaway shadow database is
+vanilla Postgres and doesn't have those schemas. Use
+`npx prisma migrate deploy` for those specifically (applies directly, no
+shadow-db diff) — confirmed necessary, not a guess, after `migrate dev`
+failed with `relation "storage.buckets" does not exist` against the
+shadow database despite the real dev database having it.
+
 ## Known follow-up (not blocking, tracked deliberately)
 
 **Connection role.** The dev database currently connects as the `postgres`
