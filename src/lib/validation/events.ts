@@ -11,6 +11,13 @@ export const createEventSchema = z.object({
   allowedDomains: z.array(z.string().trim().min(1)).min(1),
 });
 
+export const editEventSchema = z.object({
+  eventId: z.uuid(),
+  name: z.string().trim().min(1).max(200),
+  allowedDomains: z.array(z.string().trim().min(1)).min(1),
+  showPublicBallotCount: z.boolean(),
+});
+
 export const scheduleEventSchema = z
   .object({
     eventId: z.uuid(),

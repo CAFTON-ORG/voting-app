@@ -13,11 +13,11 @@ export function AcceptInvitationButton() {
   function handleClick() {
     setError(null);
     startTransition(async () => {
-      try {
-        await acceptInvitationAction();
+      const result = await acceptInvitationAction();
+      if (result.ok) {
         router.push("/admin");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+      } else {
+        setError(result.message);
       }
     });
   }

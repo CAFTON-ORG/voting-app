@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   "VIEW_FINAL_RESULTS", // per-candidate tallies after CLOSED/FINALIZED
   "EXPORT_RESULTS",
   "VIEW_AUDIT_LOG",
+  "VIEW_VOTER_LIST", // names/emails of who has voted — more sensitive than the aggregate count everyone sees; ADMIN only
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -42,6 +43,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, readonly Permission[]> = {
     "VIEW_FINAL_RESULTS",
     "EXPORT_RESULTS",
     "VIEW_AUDIT_LOG",
+    "VIEW_VOTER_LIST",
   ],
   MODERATOR: [
     "PAUSE_VOTING",

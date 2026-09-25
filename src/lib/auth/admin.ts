@@ -19,12 +19,18 @@ export async function requireUser() {
   return identity;
 }
 
+/** Distinct from requireUser()'s redirect-to-login: an *authenticated*
+ * account with no admin_users row (or a deactivated one) is never going
+ * to succeed by trying to log in again — sending it back to /admin/login
+ * is a dead-end loop. This is also a real security point, not just UX:
+ * a UB student's own valid Google sign-in must never land them on an
+ * admin login screen at all — they're routed to the public site instead. */
 export const requireAdmin = cache(async () => {
   const identity = await requireUser();
   const adminUser = await prisma.adminUser.findUnique({
     where: { authUserId: identity.authUserId },
   });
-  if (!adminUser || !adminUser.active) redirect("/admin/login");
+  if (!adminUser || !adminUser.active) redirect("/");
   return { ...identity, adminUserId: adminUser.id, role: adminUser.role };
 });
 

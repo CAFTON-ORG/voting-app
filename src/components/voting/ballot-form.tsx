@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { castBallotAction } from "@/actions/voting/cast-ballot";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { Stepper } from "./stepper";
+import { CandidateAvatar } from "./candidate-avatar";
+import { SignedInBar } from "@/components/auth/signed-in-bar";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -11,8 +14,16 @@ type EventWithBallot = Event & {
 };
 
 type Step = "select" | "review" | "success";
+const STEP_LABELS = ["Select", "Review", "Submitted"];
+const STEP_NUMBER: Record<Step, number> = { select: 1, review: 2, success: 3 };
 
-export function BallotForm({ event }: { event: EventWithBallot }) {
+export function BallotForm({
+  event,
+  signedInEmail,
+}: {
+  event: EventWithBallot;
+  signedInEmail: string;
+}) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [step, setStep] = useState<Step>("select");
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +53,9 @@ export function BallotForm({ event }: { event: EventWithBallot }) {
 
   if (step === "success" && submittedAt) {
     return (
-      <div className="mx-auto flex max-w-sm flex-col items-center px-6 py-24 text-center">
-        <h1 className="text-xl font-semibold text-balance">
+      <div className="mx-auto flex max-w-sm flex-col items-center px-6 py-16 text-center">
+        <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER[step]} />
+        <h1 className="mt-10 text-xl font-semibold text-balance">
           Your vote has been successfully submitted.
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">{event.name}</p>
@@ -61,21 +73,30 @@ export function BallotForm({ event }: { event: EventWithBallot }) {
   if (step === "review") {
     return (
       <div className="mx-auto max-w-md px-6 py-16">
-        <h1 className="text-lg font-semibold">Review your vote</h1>
+        <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER[step]} />
+        <h1 className="mt-8 text-lg font-semibold">Review your vote</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Once your ballot is submitted, your vote cannot be changed.
         </p>
         <ul className="mt-6 flex flex-col gap-3">
           {event.categories.map((category) => {
             const candidate = category.candidates.find((c) => c.id === selections[category.id]);
+            if (!candidate) return null;
             return (
-              <li key={category.id} className="rounded-md border p-4">
-                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {category.name}
-                </p>
-                <p className="mt-1 font-medium">
-                  #{candidate?.candidateNumber} {candidate?.fullName}
-                </p>
+              <li key={category.id} className="flex items-center gap-3 rounded-md border p-4">
+                <CandidateAvatar
+                  photoUrl={candidate.photoUrl}
+                  fullName={candidate.fullName}
+                  className="size-12"
+                />
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {category.name}
+                  </p>
+                  <p className="mt-0.5 font-medium">
+                    #{candidate.candidateNumber} {candidate.fullName}
+                  </p>
+                </div>
               </li>
             );
           })}
@@ -95,7 +116,8 @@ export function BallotForm({ event }: { event: EventWithBallot }) {
 
   return (
     <div className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-lg font-semibold">{event.name}</h1>
+      <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER[step]} />
+      <h1 className="mt-8 text-lg font-semibold">{event.name}</h1>
       <div className="mt-6 flex flex-col gap-8">
         {event.categories.map((category) => (
           <div key={category.id}>
@@ -117,6 +139,11 @@ export function BallotForm({ event }: { event: EventWithBallot }) {
                     }`}
                   >
                     <RadioGroupItem value={candidate.id} />
+                    <CandidateAvatar
+                      photoUrl={candidate.photoUrl}
+                      fullName={candidate.fullName}
+                      className="size-9"
+                    />
                     <span>
                       <span className="font-medium">#{candidate.candidateNumber}</span>{" "}
                       {candidate.fullName}
@@ -131,6 +158,9 @@ export function BallotForm({ event }: { event: EventWithBallot }) {
       <Button className="mt-8 w-full" disabled={!allSelected} onClick={() => setStep("review")}>
         Review Ballot
       </Button>
+      <div className="mt-6">
+        <SignedInBar email={signedInEmail} redirectTo={`/events/${event.slug}/vote`} />
+      </div>
     </div>
   );
 }

@@ -24,14 +24,13 @@ export function CandidatePhotoUpload({
     const formData = new FormData();
     formData.set("photo", file);
     startTransition(async () => {
-      try {
-        await uploadCandidatePhotoAction(candidateId, formData);
+      const result = await uploadCandidatePhotoAction(candidateId, formData);
+      if (result.ok) {
         router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed.");
-      } finally {
-        if (inputRef.current) inputRef.current.value = "";
+      } else {
+        setError(result.message);
       }
+      if (inputRef.current) inputRef.current.value = "";
     });
   }
 

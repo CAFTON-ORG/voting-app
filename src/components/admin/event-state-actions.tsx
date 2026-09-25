@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import {
   openVotingAction,
   pauseVotingAction,
@@ -10,8 +13,9 @@ import {
   reopenVotingAction,
   finalizeEventAction,
 } from "@/actions/events/state";
-import type { EventState } from "@prisma/client";
-import type { Permission } from "@/lib/auth/permissions";
+import type { EventState, AdminRole } from "@prisma/client";
+import { roleCan } from "@/lib/auth/permissions";
+import type { ActionResult } from "@/lib/actions/result";
 
 /** Buttons are shown based on the viewer's permissions purely for UX —
  * every action re-checks the same permission server-side via
@@ -20,25 +24,23 @@ import type { Permission } from "@/lib/auth/permissions";
 export function EventStateActions({
   eventId,
   state,
-  can,
+  role,
 }: {
   eventId: string;
   state: EventState;
-  can: (permission: Permission) => boolean;
+  role: AdminRole;
 }) {
+  const can = (permission: Parameters<typeof roleCan>[1]) => roleCan(role, permission);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  const [showReopenForm, setShowReopenForm] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
 
-  function run(action: () => Promise<void>) {
+  function run(action: () => Promise<ActionResult>) {
     setError(null);
     startTransition(async () => {
-      try {
-        await action();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
-      }
+      const result = await action();
+      if (!result.ok) setError(result.message);
     });
   }
 
@@ -51,11 +53,7 @@ export function EventStateActions({
           </Button>
         )}
         {state === "OPEN" && can("PAUSE_VOTING") && (
-          <Button
-            variant="outline"
-            disabled={pending}
-            onClick={() => run(() => pauseVotingAction(eventId))}
-          >
+          <Button variant="outline" disabled={pending} onClick={() => run(() => pauseVotingAction(eventId))}>
             Pause Voting
           </Button>
         )}
@@ -65,68 +63,62 @@ export function EventStateActions({
           </Button>
         )}
         {(state === "OPEN" || state === "PAUSED") && can("CLOSE_VOTING") && (
-          <Button
+          <ConfirmDialog
+            trigger={
+              <Button variant="destructive" disabled={pending}>
+                Close Voting
+              </Button>
+            }
+            title="Close voting for this event?"
+            description="This can only be reopened afterward as a logged exception, not a normal action."
+            confirmLabel="Close Voting"
             variant="destructive"
-            disabled={pending}
-            onClick={() => {
-              if (confirm("Close voting for this event? This can only be reopened as an exception.")) {
-                run(() => closeVotingAction(eventId));
-              }
-            }}
-          >
-            Close Voting
-          </Button>
+            onConfirm={() => run(() => closeVotingAction(eventId))}
+          />
         )}
-        {state === "CLOSED" && can("REOPEN_VOTING") && !showReopenForm && (
-          <Button variant="outline" disabled={pending} onClick={() => setShowReopenForm(true)}>
+        {state === "CLOSED" && can("REOPEN_VOTING") && (
+          <Button variant="outline" disabled={pending} onClick={() => setReopenOpen(true)}>
             Reopen Voting (exceptional)
           </Button>
         )}
         {state === "CLOSED" && can("FINALIZE_RESULTS") && (
-          <Button
-            disabled={pending}
-            onClick={() => {
-              if (confirm("Finalize results? This cannot be undone through the dashboard.")) {
-                run(() => finalizeEventAction(eventId));
-              }
-            }}
-          >
-            Finalize Results
-          </Button>
+          <ConfirmDialog
+            trigger={<Button disabled={pending}>Finalize Results</Button>}
+            title="Finalize results?"
+            description="This cannot be undone through the dashboard. Results and candidates become permanently frozen."
+            confirmLabel="Finalize"
+            variant="destructive"
+            onConfirm={() => run(() => finalizeEventAction(eventId))}
+          />
         )}
       </div>
 
-      {showReopenForm && (
-        <div className="flex flex-col gap-2 rounded-md border border-destructive/40 p-3">
-          <label className="text-sm font-medium" htmlFor="reopen-reason">
-            Reason for reopening (required, logged to the audit trail)
-          </label>
-          <textarea
-            id="reopen-reason"
-            className="rounded-md border p-2 text-sm"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              disabled={pending || !reason.trim()}
-              onClick={() =>
-                run(async () => {
-                  await reopenVotingAction(eventId, reason);
-                  setShowReopenForm(false);
-                  setReason("");
-                })
-              }
-            >
-              Confirm Reopen
-            </Button>
-            <Button variant="outline" disabled={pending} onClick={() => setShowReopenForm(false)}>
-              Cancel
-            </Button>
+      <ConfirmDialog
+        open={reopenOpen}
+        onOpenChange={setReopenOpen}
+        title="Reopen voting?"
+        variant="destructive"
+        confirmLabel="Reopen Voting"
+        description={
+          <div className="flex flex-col gap-2 pt-1">
+            <p>This is an exceptional action, logged to the audit trail. A reason is required.</p>
+            <Label htmlFor="reopen-reason" className="sr-only">
+              Reason
+            </Label>
+            <Textarea
+              id="reopen-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Why is this event being reopened?"
+            />
           </div>
-        </div>
-      )}
+        }
+        onConfirm={async () => {
+          const result = await reopenVotingAction(eventId, reason);
+          if (!result.ok) throw new Error(result.message);
+          setReason("");
+        }}
+      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

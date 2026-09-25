@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { inviteAdminAction } from "@/actions/admin/invitations";
 import type { AdminRole } from "@prisma/client";
 
@@ -19,52 +23,51 @@ export function InviteAdminForm() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      try {
-        await inviteAdminAction({ email, role });
-        setEmail("");
+      const result = await inviteAdminAction({ email, role });
+      if (result.ok) {
+        setEmail(""); // only cleared on success — a failed submit keeps what was typed
         router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+      } else {
+        setError(result.message);
       }
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-md border p-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="invite-email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
-          id="invite-email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border p-2 text-sm"
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="invite-role" className="text-sm font-medium">
-          Role
-        </label>
-        <select
-          id="invite-role"
-          value={role}
-          onChange={(e) => setRole(e.target.value as AdminRole)}
-          className="rounded-md border p-2 text-sm"
-        >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Sending…" : "Send Invitation"}
-      </Button>
-    </form>
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="invite-email">Email</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="invite-role">Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as AdminRole)}>
+              <SelectTrigger id="invite-role" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" disabled={pending}>
+            {pending ? "Sending…" : "Send Invitation"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

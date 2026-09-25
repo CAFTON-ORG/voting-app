@@ -222,8 +222,13 @@ model AuditLog {
   metadata     Json     @default("{}")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  event      Event?     @relation(fields: [eventId], references: [id])
-  actorAdmin AdminUser? @relation(fields: [actorAdminId], references: [id])
+  // SetNull, not the default (Restrict): an audit record must survive
+  // deletion of the event/admin it refers to — losing the FK link but
+  // keeping the row (with the name already captured in `metadata`) is
+  // correct here, unlike Candidate/Category deletion where cascading the
+  // ballot_selections is the actual intent.
+  event      Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  actorAdmin AdminUser? @relation(fields: [actorAdminId], references: [id], onDelete: SetNull)
 
   @@index([eventId, createdAt])
   @@map("audit_logs")
