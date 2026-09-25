@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/admin";
+import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminDashboardPage() {
   const admin = await requireAdmin();
@@ -14,6 +16,11 @@ export default async function AdminDashboardPage() {
           {admin.email} · {admin.role}
         </p>
       </div>
+      {roleCan(admin.role, "MANAGE_EVENT_CONFIG") && (
+        <Button asChild className="mt-4">
+          <Link href="/admin/events/new">New Event</Link>
+        </Button>
+      )}
       <ul className="mt-6 flex flex-col gap-2">
         {events.map((event) => (
           <li key={event.id}>

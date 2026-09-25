@@ -4,6 +4,8 @@ import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { EventStateActions } from "@/components/admin/event-state-actions";
+import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
+import { ManageCandidatesForm } from "@/components/admin/manage-candidates-form";
 
 export default async function AdminEventDetailPage(props: PageProps<"/admin/events/[id]">) {
   const { id } = await props.params;
@@ -34,6 +36,17 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
       <div className="mt-6">
         <EventStateActions eventId={event.id} state={event.state} can={can} />
       </div>
+
+      {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+            Schedule
+          </h2>
+          <div className="mt-3">
+            <ScheduleEventForm eventId={event.id} />
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
@@ -71,7 +84,15 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
         <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
           Candidates
         </h2>
-        <div className="mt-3 flex flex-col gap-4">
+
+        {(event.state === "DRAFT" || event.state === "SCHEDULED") &&
+          can("MANAGE_CANDIDATES_FULL") && (
+            <div className="mt-3">
+              <ManageCandidatesForm eventId={event.id} categories={event.categories} />
+            </div>
+          )}
+
+        <div className="mt-4 flex flex-col gap-4">
           {event.categories.map((category) => (
             <div key={category.id}>
               <p className="text-sm font-medium">{category.name}</p>
