@@ -1,5 +1,7 @@
 import { testPrisma } from "./db";
 
+export { pgErrorCode } from "../../src/lib/prisma/errors";
+
 export type Selection = { categoryId: string; candidateId: string };
 
 export async function castBallot(params: {
@@ -19,17 +21,4 @@ export async function castBallot(params: {
     )
   `;
   return rows[0];
-}
-
-/** cast_ballot()'s custom SQLSTATEs (see prisma/migrations/..._rls_and_cast_ballot)
- * arrive nested inside Prisma's raw-query error wrapper, not as `err.code`
- * directly — confirmed empirically against the real driver adapter, not
- * assumed. Falls back to parsing `err.message` in case the wrapper shape
- * ever changes across Prisma versions. */
-export function pgErrorCode(err: unknown): string | undefined {
-  const anyErr = err as { meta?: { driverAdapterError?: { cause?: { code?: string } } }; message?: string };
-  const nested = anyErr?.meta?.driverAdapterError?.cause?.code;
-  if (nested) return nested;
-  const match = anyErr?.message?.match(/Code: `(P\d+)`/);
-  return match?.[1];
 }
