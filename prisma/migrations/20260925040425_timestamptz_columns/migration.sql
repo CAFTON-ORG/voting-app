@@ -1,0 +1,30 @@
+-- AlterTable
+ALTER TABLE "admin_invitations" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "expires_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "accepted_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "admin_users" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "audit_logs" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "ballots" ALTER COLUMN "submitted_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "candidates" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "events" ALTER COLUMN "voting_opens_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "voting_closes_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "finalized_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "voter_participations" ALTER COLUMN "voted_at" SET DATA TYPE TIMESTAMPTZ(3);
+
+-- AlterTable
+ALTER TABLE "voting_access_codes" ALTER COLUMN "used_at" SET DATA TYPE TIMESTAMPTZ(3),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(3);

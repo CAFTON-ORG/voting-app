@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EligibilityMode {
+  DOMAIN_ONLY
+  DOMAIN_AND_ACCESS_CODE
+
+  @@map("eligibility_mode")
+}
+
+enum EventState {
+  DRAFT
+  SCHEDULED
+  OPEN
+  PAUSED
+  CLOSED
+  FINALIZED
+
+  @@map("event_state")
+}
+
+enum AdminRole {
+  ADMIN
+  MODERATOR
+  AUDITOR
+
+  @@map("admin_role")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+
+  @@map("invitation_status")
+}
+
+enum AccessCodeStatus {
+  UNUSED
+  USED
+  REVOKED
+
+  @@map("access_code_status")
+}
+
+/// A single votable event ("Mr. & Ms. SIT — Netizen's Choice 2026"). Reusable
+/// for future Cafton-run events, not hardcoded to this one.
+model Event {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                  String          @unique
+  name                  String
+  eligibilityMode       EligibilityMode @default(DOMAIN_ONLY) @map("eligibility_mode")
+  allowedDomains        String[]        @map("allowed_domains")
+  state                 EventState      @default(DRAFT)
+  showPublicBallotCount Boolean         @default(true) @map("show_public_ballot_count")
+  votingOpensAt         DateTime?       @map("voting_opens_at") @db.Timestamptz(3)
+  votingClosesAt        DateTime?       @map("voting_closes_at") @db.Timestamptz(3)
+  finalizedAt           DateTime?       @map("finalized_at") @db.Timestamptz(3)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  categories     CandidateCategory[]
+  candidates     Candidate[]
+  participations VoterParticipation[]
+  ballots        Ballot[]
+  accessCodes    VotingAccessCode[]
+  auditLogs      AuditLog[]
+
+  @@map("events")
+}
+
+/// A category within an event ("Mr. SIT", "Ms. SIT"). Data-driven — never
+/// hardcoded in application logic.
+model CandidateCategory {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String @map("event_id") @db.Uuid
+  name         String
+  displayOrder Int    @default(0) @map("display_order")
+
+  event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+  selections BallotSelection[]
+
+  @@unique([eventId, name])
+  @@map("candidate_categories")
+}
+
+model Candidate {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  eventId         String   @map("event_id") @db.Uuid
+  candidateNumber Int      @map("candidate_number")
+  fullName        String   @map("full_name")
+  photoUrl        String?  @map("photo_url")
+  programYear     String?  @map("program_year")
+  tagline         String?
+  isActive        Boolean  @default(true) @map("is_active")
+  displayOrder    Int      @default(0) @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  category   CandidateCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selections BallotSelection[]
+
+  @@unique([eventId, categoryId, candidateNumber])
+  @@index([eventId, categoryId])
+  @@map("candidates")
+}
+
+/// Proves "this authenticated account already voted in this event."
+/// Deliberately holds no reference to any Ballot — see BallotSelection
+/// below for why that separation is the whole point of the privacy design.
+model VoterParticipation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId         String   @map("event_id") @db.Uuid
+  voterAuthUserId String   @map("voter_auth_user_id") @db.Uuid
+  votedAt         DateTime @default(now()) @map("voted_at") @db.Timestamptz(3)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // The actual "one account = one ballot" guarantee. Enforced by Postgres,
+  // not application logic, so it holds even under concurrent requests.
+  @@unique([eventId, voterAuthUserId])
+  @@map("voter_participations")
+}
+
+/// An anonymous submitted vote. Deliberately holds no voter identity column
+/// — see VoterParticipation above. The two are only ever joined transiently
+/// inside cast_ballot()'s single transaction, never persisted together.
+model Ballot {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId     String   @map("event_id") @db.Uuid
+  submittedAt DateTime @default(now()) @map("submitted_at") @db.Timestamptz(3)
+
+  event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selections BallotSelection[]
+
+  @@index([eventId])
+  @@map("ballots")
+}
+
+model BallotSelection {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ballotId    String @map("ballot_id") @db.Uuid
+  categoryId  String @map("category_id") @db.Uuid
+  candidateId String @map("candidate_id") @db.Uuid
+
+  ballot    Ballot            @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  category  CandidateCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  candidate Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // Exactly one selection per category per ballot.
+  @@unique([ballotId, categoryId])
+  @@index([ballotId])
+  @@map("ballot_selections")
+}
+
+/// Administrative authorization, completely separate from voter eligibility.
+/// Holding an @s.ubaguio.edu / @e.ubaguio.edu account never implies a row
+/// here exists.
+model AdminUser {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authUserId String    @unique @map("auth_user_id") @db.Uuid
+  role       AdminRole
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  invitationsSent AdminInvitation[] @relation("InvitedBy")
+  auditLogs       AuditLog[]
+
+  @@map("admin_users")
+}
+
+/// Lets an existing ADMIN authorize a new ADMIN/MODERATOR/AUDITOR account.
+/// The invitee must fully authenticate via Google/Supabase Auth first —
+/// this table is only consulted after that, so there is no weaker
+/// intermediate "claim" step to hijack.
+model AdminInvitation {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String
+  role        AdminRole
+  invitedById String            @map("invited_by") @db.Uuid
+  status      InvitationStatus  @default(PENDING)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime          @map("expires_at") @db.Timestamptz(3)
+  acceptedAt  DateTime?         @map("accepted_at") @db.Timestamptz(3)
+
+  invitedBy AdminUser @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@unique([email, status])
+  @@map("admin_invitations")
+}
+
+/// Mode B (DOMAIN_AND_ACCESS_CODE) support. Schema exists now so Mode B
+/// never requires a migration later, but no admin UI is built for it yet —
+/// the initial event runs DOMAIN_ONLY and never touches this table.
+model VotingAccessCode {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId   String           @map("event_id") @db.Uuid
+  codeHash  String           @map("code_hash")
+  status    AccessCodeStatus @default(UNUSED)
+  usedAt    DateTime?        @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, codeHash])
+  @@index([eventId, status])
+  @@map("voting_access_codes")
+}
+
+model AuditLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String?  @map("event_id") @db.Uuid
+  actorAdminId String?  @map("actor_admin_id") @db.Uuid
+  action       String
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event      Event?     @relation(fields: [eventId], references: [id])
+  actorAdmin AdminUser? @relation(fields: [actorAdminId], references: [id])
+
+  @@index([eventId, createdAt])
+  @@map("audit_logs")
+}
