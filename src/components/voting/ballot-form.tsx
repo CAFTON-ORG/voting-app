@@ -120,9 +120,9 @@ export function BallotForm({
     return (
       <div className="flex min-h-svh flex-col">
         <PublicHeader />
-        <main className="mx-auto w-full max-w-md flex-1 px-6 py-12">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
-          <div className="mt-12 flex flex-col items-center text-center">
+          <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
             <CheckCircle2 className="size-12 text-primary" />
             <h1 className="mt-6 text-xl font-semibold text-balance">Your vote has been submitted.</h1>
             <p className="mt-3 text-sm text-muted-foreground">
@@ -152,52 +152,58 @@ export function BallotForm({
     return (
       <div className="flex min-h-svh flex-col">
         <PublicHeader />
-        <main className="mx-auto w-full max-w-md flex-1 px-6 py-12">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
-          <h1 className="mt-8 text-lg font-semibold">Review your vote</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Please review your selections carefully. Once submitted, your ballot cannot be changed.
-          </p>
-          <ul className="mt-6 flex flex-col gap-3">
-            {event.categories.map((category) => {
-              const candidate = category.candidates.find((c) => c.id === selections[category.id]);
-              if (!candidate) return null;
-              return (
-                <li key={category.id} className="flex items-center gap-4 rounded-lg border p-3">
-                  <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                    {candidate.photoUrl ? (
-                      <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
-                    ) : (
-                      <div className="flex size-full items-center justify-center text-lg font-semibold text-muted-foreground">
-                        {candidate.fullName
-                          .split(" ")
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .map((p) => p[0]?.toUpperCase())
-                          .join("")}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {category.name}
-                    </p>
-                    <p className="mt-0.5 truncate font-medium">
-                      #{candidate.candidateNumber} {candidate.fullName}
-                    </p>
-                    {candidate.programYear && (
-                      <p className="truncate text-xs text-muted-foreground">{candidate.programYear}</p>
-                    )}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setStep("select")}>
-                    Change
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-          {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-          <div className="mt-6 flex gap-3">
+          <div className="mx-auto max-w-md">
+            <h1 className="mt-8 text-lg font-semibold">Review your vote</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Please review your selections carefully. Once submitted, your ballot cannot be changed.
+            </p>
+            <ul className="mt-6 flex flex-col gap-3">
+              {event.categories.map((category) => {
+                const candidate = category.candidates.find((c) => c.id === selections[category.id]);
+                if (!candidate) return null;
+                return (
+                  <li key={category.id} className="flex items-center gap-4 rounded-lg border p-3">
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {candidate.photoUrl ? (
+                        <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
+                      ) : (
+                        <div className="flex size-full items-center justify-center text-lg font-semibold text-muted-foreground">
+                          {candidate.fullName
+                            .split(" ")
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((p) => p[0]?.toUpperCase())
+                            .join("")}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {category.name}
+                      </p>
+                      <p className="mt-0.5 truncate font-medium">
+                        #{candidate.candidateNumber} {candidate.fullName}
+                      </p>
+                      {candidate.programYear && (
+                        <p className="truncate text-xs text-muted-foreground">{candidate.programYear}</p>
+                      )}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setStep("select")}>
+                      Change
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+            {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+          </div>
+        </main>
+        <PublicFooter />
+
+        <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
+          <div className="mx-auto flex w-full max-w-md items-center gap-3">
             <Button variant="outline" onClick={() => setStep("select")} disabled={pending}>
               Back
             </Button>
@@ -205,8 +211,7 @@ export function BallotForm({
               Submit My Vote
             </Button>
           </div>
-        </main>
-        <PublicFooter />
+        </div>
 
         <Dialog open={confirmOpen} onOpenChange={(open) => !pending && setConfirmOpen(open)}>
           <DialogContent className="sm:max-w-sm">
