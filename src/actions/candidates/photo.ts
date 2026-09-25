@@ -85,3 +85,44 @@ export async function uploadCandidatePhotoAction(
     return fail("Could not upload the photo. Please try again.");
   }
 }
+
+/** Update the record first, then delete the object — same ordering
+ * principle as upload: never leave Storage and the DB pointing at
+ * different things if the second step fails. Here a failed Storage
+ * delete just leaves an orphaned object, which is harmless (never
+ * referenced by any UI once photoUrl is cleared), vs. a failed DB update
+ * leaving photoUrl pointing at a now-deleted object, which would render
+ * broken. */
+export async function removeCandidatePhotoAction(candidateId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_CANDIDATES_LIMITED");
+    const candidate = await prisma.candidate.findUniqueOrThrow({ where: { id: candidateId } });
+    const event = await prisma.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
+    if (event.state === "FINALIZED") {
+      return fail("This event's results have been finalized and its candidates are frozen.");
+    }
+    if (!candidate.photoUrl) return ok(undefined);
+
+    const path = extractStoragePath(candidate.photoUrl);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.candidate.update({ where: { id: candidateId }, data: { photoUrl: null } });
+      await tx.auditLog.create({
+        data: {
+          eventId: candidate.eventId,
+          actorAdminId: admin.adminUserId,
+          action: "CANDIDATE_PHOTO_REMOVED",
+          metadata: { fullName: candidate.fullName },
+        },
+      });
+    });
+
+    if (path && supabaseAdmin) {
+      await supabaseAdmin.storage.from(CANDIDATE_MEDIA_BUCKET).remove([path]);
+    }
+
+    return ok(undefined);
+  } catch {
+    return fail("Could not remove the photo. Please try again.");
+  }
+}

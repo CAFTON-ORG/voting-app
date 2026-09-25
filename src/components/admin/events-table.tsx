@@ -1,18 +1,15 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/admin/user-avatar";
+import { StatusBadge, type StatusBadgeStatus } from "@/components/admin/status-badge";
 import { DataTable, SortableHeader } from "@/components/admin/data-table";
-
-const STATE_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  DRAFT: "outline",
-  SCHEDULED: "secondary",
-  OPEN: "default",
-  PAUSED: "destructive",
-  CLOSED: "secondary",
-  FINALIZED: "outline",
-};
+import { ArchiveEventButton } from "@/components/admin/archive-event-button";
+import { DeleteEventButton } from "@/components/admin/delete-event-button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export type EventRow = {
   id: string;
@@ -20,6 +17,10 @@ export type EventRow = {
   state: string;
   eligibilityMode: string;
   votes: number;
+  archived: boolean;
+  createdByEmail: string | null;
+  canDelete: boolean;
+  canArchive: boolean;
 };
 
 /** Column defs live here, in a Client Component, deliberately — a
@@ -46,13 +47,26 @@ const columns: ColumnDef<EventRow>[] = [
       <SortableHeader label="State" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
     ),
     cell: ({ row }) => (
-      <Badge variant={STATE_VARIANT[row.original.state] ?? "outline"}>{row.original.state}</Badge>
+      <StatusBadge status={(row.original.archived ? "ARCHIVED" : row.original.state) as StatusBadgeStatus} />
     ),
   },
   {
     accessorKey: "eligibilityMode",
     header: "Mode",
     cell: ({ row }) => <span className="text-muted-foreground">{row.original.eligibilityMode}</span>,
+  },
+  {
+    accessorKey: "createdByEmail",
+    header: "Created by",
+    cell: ({ row }) =>
+      row.original.createdByEmail ? (
+        <div className="flex items-center gap-2">
+          <UserAvatar label={row.original.createdByEmail} size="sm" />
+          <span className="text-sm text-muted-foreground">{row.original.createdByEmail}</span>
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      ),
   },
   {
     accessorKey: "votes",
@@ -63,10 +77,48 @@ const columns: ColumnDef<EventRow>[] = [
     ),
     cell: ({ row }) => <div className="text-right">{row.original.votes}</div>,
   },
+  {
+    id: "actions",
+    header: () => <div className="text-right">Actions</div>,
+    cell: ({ row }) => (
+      <div className="flex justify-end gap-2">
+        {row.original.canArchive && (
+          <ArchiveEventButton
+            eventId={row.original.id}
+            eventName={row.original.name}
+            archived={row.original.archived}
+          />
+        )}
+        {row.original.canDelete && <DeleteEventButton eventId={row.original.id} eventName={row.original.name} />}
+      </div>
+    ),
+  },
 ];
 
 export function EventsTable({ data }: { data: EventRow[] }) {
+  const [showArchived, setShowArchived] = useState(false);
+  const filtered = useMemo(
+    () => (showArchived ? data : data.filter((row) => !row.archived)),
+    [data, showArchived]
+  );
+  const archivedCount = data.filter((row) => row.archived).length;
+
   return (
-    <DataTable columns={columns} data={data} searchPlaceholder="Search events…" emptyMessage="No events yet." />
+    <div className="flex flex-col gap-3">
+      {archivedCount > 0 && (
+        <div className="flex items-center justify-end gap-2">
+          <Label htmlFor="show-archived" className="text-sm text-muted-foreground">
+            Show archived ({archivedCount})
+          </Label>
+          <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+        </div>
+      )}
+      <DataTable
+        columns={columns}
+        data={filtered}
+        searchPlaceholder="Search events…"
+        emptyMessage="No events yet."
+      />
+    </div>
   );
 }

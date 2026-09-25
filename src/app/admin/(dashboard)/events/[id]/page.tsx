@@ -6,13 +6,20 @@ import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
+import { getAdminEmailsByIds } from "@/lib/admin/queries";
+import { getEventReadiness } from "@/lib/events/readiness";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
-import { ManageCandidatesForm } from "@/components/admin/manage-candidates-form";
-import { CandidatePhotoUpload } from "@/components/admin/candidate-photo-upload";
+import { RescheduleEventDialog } from "@/components/admin/reschedule-event-dialog";
+import { CategoryManager } from "@/components/admin/category-manager";
+import { CandidatesGrid } from "@/components/admin/candidates-grid";
 import { EditEventDialog } from "@/components/admin/edit-event-dialog";
 import { DeleteEventButton } from "@/components/admin/delete-event-button";
-import { CandidateAvatar } from "@/components/voting/candidate-avatar";
+import { ArchiveEventButton } from "@/components/admin/archive-event-button";
+import { EventReadinessCard } from "@/components/admin/event-readiness-card";
+import { EntityMetadata } from "@/components/admin/entity-metadata";
+import { StatusBadge } from "@/components/admin/status-badge";
+import { StatCards } from "@/components/admin/stat-cards";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,15 +32,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-const STATE_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  DRAFT: "outline",
-  SCHEDULED: "secondary",
-  OPEN: "default",
-  PAUSED: "destructive",
-  CLOSED: "secondary",
-  FINALIZED: "outline",
-};
-
 export default async function AdminEventDetailPage(props: PageProps<"/admin/events/[id]">) {
   const { id } = await props.params;
   const admin = await requireAdmin();
@@ -41,7 +39,12 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
   const event = await prisma.event.findUnique({
     where: { id },
-    include: { categories: { orderBy: { displayOrder: "asc" }, include: { candidates: true } } },
+    include: {
+      categories: {
+        orderBy: { displayOrder: "asc" },
+        include: { candidates: { orderBy: { displayOrder: "asc" } } },
+      },
+    },
   });
   if (!event) notFound();
 
@@ -62,16 +65,57 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
   const canEdit = can("MANAGE_EVENT_CONFIG") && event.state !== "FINALIZED";
   const canDelete = can("MANAGE_EVENT_CONFIG") && (event.state === "DRAFT" || event.state === "SCHEDULED");
+  const canArchive = can("MANAGE_EVENT_CONFIG") && (event.state === "CLOSED" || event.state === "FINALIZED");
+  const canReschedule = can("MANAGE_EVENT_CONFIG") && event.state === "SCHEDULED";
+
+  const totalCandidates = event.categories.reduce((sum, c) => sum + c.candidates.length, 0);
+  const readiness = getEventReadiness(event);
+
+  const adminEmails = await getAdminEmailsByIds(
+    [event.createdById, event.updatedById].filter((v): v is string => Boolean(v))
+  );
+
+  const categoryOptions = event.categories.map((c) => ({ id: c.id, name: c.name }));
+  const flatCandidates = event.categories.flatMap((category) =>
+    category.candidates.map((candidate) => ({
+      id: candidate.id,
+      eventId: event.id,
+      candidateNumber: candidate.candidateNumber,
+      fullName: candidate.fullName,
+      photoUrl: candidate.photoUrl,
+      programYear: candidate.programYear,
+      tagline: candidate.tagline,
+      bio: candidate.bio,
+      isActive: candidate.isActive,
+      categoryName: category.name,
+    }))
+  );
+  const categoryRows = event.categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    candidateCount: c.candidates.length,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">{event.name}</h1>
-          <Badge variant={STATE_VARIANT[event.state] ?? "outline"}>{event.state}</Badge>
-          <span className="text-sm text-muted-foreground">{event.eligibilityMode}</span>
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl font-semibold">{event.name}</h1>
+            <StatusBadge status={event.archivedAt ? "ARCHIVED" : event.state} />
+            <Badge variant="outline">{event.eligibilityMode}</Badge>
+          </div>
+          <div className="mt-1">
+            <EntityMetadata
+              createdByEmail={event.createdById ? adminEmails.get(event.createdById) : null}
+              createdAt={event.createdAt}
+              updatedByEmail={event.updatedById ? adminEmails.get(event.updatedById) : null}
+              updatedAt={event.updatedAt}
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {event.state === "FINALIZED" && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/admin/events/${event.id}/present`}>
@@ -80,130 +124,140 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
               </Link>
             </Button>
           )}
+          {canReschedule && event.votingOpensAt && event.votingClosesAt && (
+            <RescheduleEventDialog
+              eventId={event.id}
+              currentOpensAt={event.votingOpensAt}
+              currentClosesAt={event.votingClosesAt}
+            />
+          )}
           {canEdit && <EditEventDialog event={event} />}
+          {canArchive && (
+            <ArchiveEventButton eventId={event.id} eventName={event.name} archived={Boolean(event.archivedAt)} />
+          )}
           {canDelete && <DeleteEventButton eventId={event.id} eventName={event.name} />}
         </div>
       </div>
-      <p className="-mt-4 text-sm text-muted-foreground">{ballotCount} votes submitted</p>
 
-      <div>
-        <EventStateActions eventId={event.id} state={event.state} role={admin.role} />
-      </div>
+      <StatCards
+        stats={[
+          { label: "Categories", value: event.categories.length },
+          { label: "Candidates", value: totalCandidates },
+          { label: "Votes submitted", value: ballotCount },
+          { label: "Voting status", value: event.archivedAt ? "Archived" : event.state },
+        ]}
+      />
 
-      {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="flex flex-col gap-6 lg:col-span-4">
+          {!readiness.isReady && event.state !== "FINALIZED" && <EventReadinessCard items={readiness.items} />}
 
-      <Tabs defaultValue="candidates">
-        <TabsList>
-          <TabsTrigger value="candidates">Candidates</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-          {canSeeVoters && <TabsTrigger value="voters">Voters</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="candidates" className="mt-4">
-          {canManageCandidatesFull && (
-            <div className="mb-4">
-              <ManageCandidatesForm eventId={event.id} categories={event.categories} />
-            </div>
-          )}
-          <div className="flex flex-col gap-6">
-            {event.categories.map((category) => (
-              <div key={category.id}>
-                <p className="text-sm font-medium">{category.name}</p>
-                <ul className="mt-2 flex flex-col gap-2">
-                  {category.candidates.map((candidate) => (
-                    <li key={candidate.id} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <CandidateAvatar
-                          photoUrl={candidate.photoUrl}
-                          fullName={candidate.fullName}
-                          className="size-9"
-                        />
-                        <span className="text-sm">
-                          #{candidate.candidateNumber} {candidate.fullName}
-                          {!candidate.isActive && (
-                            <span className="text-muted-foreground"> (inactive)</span>
-                          )}
-                        </span>
-                      </div>
-                      {canManageCandidatesLimited && (
-                        <CandidatePhotoUpload
-                          candidateId={candidate.id}
-                          currentPhotoUrl={candidate.photoUrl}
-                        />
-                      )}
-                    </li>
-                  ))}
-                  {category.candidates.length === 0 && (
-                    <li className="text-sm text-muted-foreground">No candidates yet.</li>
-                  )}
-                </ul>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm font-medium text-muted-foreground">Schedule</p>
+            {event.votingOpensAt && event.votingClosesAt ? (
+              <div className="mt-2 flex flex-col gap-1 text-sm">
+                <p>Opens: {event.votingOpensAt.toLocaleString()}</p>
+                <p>Closes: {event.votingClosesAt.toLocaleString()}</p>
               </div>
-            ))}
-            {event.categories.length === 0 && (
-              <p className="text-sm text-muted-foreground">No categories yet.</p>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">Not scheduled yet.</p>
             )}
           </div>
-        </TabsContent>
 
-        <TabsContent value="results" className="mt-4">
-          {!results && (
-            <p className="text-sm text-muted-foreground">
-              {votingEverActive
-                ? "Your role does not include live results while voting is open."
-                : "Results are not yet available."}
-            </p>
-          )}
-          {results && (
-            <div className="flex flex-col gap-6">
-              {results.map((category) => (
-                <div key={category.id}>
-                  <p className="text-sm font-medium">{category.name}</p>
-                  <Table className="mt-2">
+          {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
+
+          <EventStateActions eventId={event.id} state={event.state} role={admin.role} />
+        </div>
+
+        <div className="lg:col-span-8">
+          <Tabs defaultValue="candidates">
+            <TabsList>
+              <TabsTrigger value="candidates">Candidates</TabsTrigger>
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+              <TabsTrigger value="results">Results</TabsTrigger>
+              {canSeeVoters && <TabsTrigger value="voters">Voters</TabsTrigger>}
+            </TabsList>
+
+            <TabsContent value="candidates" className="mt-4">
+              <CandidatesGrid
+                eventId={event.id}
+                categories={categoryOptions}
+                candidates={flatCandidates}
+                canManageFull={canManageCandidatesFull}
+                canManageLimited={canManageCandidatesLimited}
+              />
+            </TabsContent>
+
+            <TabsContent value="categories" className="mt-4">
+              <CategoryManager
+                eventId={event.id}
+                categories={categoryRows}
+                canManageFull={canManageCandidatesFull}
+                canManageLimited={canManageCandidatesLimited}
+              />
+            </TabsContent>
+
+            <TabsContent value="results" className="mt-4">
+              {!results && (
+                <p className="text-sm text-muted-foreground">
+                  {votingEverActive
+                    ? "Your role does not include live results while voting is open."
+                    : "Results are not yet available."}
+                </p>
+              )}
+              {results && (
+                <div className="flex flex-col gap-6">
+                  {results.map((category) => (
+                    <div key={category.id}>
+                      <p className="text-sm font-medium">{category.name}</p>
+                      <Table className="mt-2">
+                        <TableBody>
+                          {category.candidates.map((candidate) => (
+                            <TableRow key={candidate.id}>
+                              <TableCell className="w-10 text-muted-foreground">
+                                #{candidate.candidateNumber}
+                              </TableCell>
+                              <TableCell>{candidate.fullName}</TableCell>
+                              <TableCell className="text-right font-medium">{candidate.votes}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {canSeeVoters && (
+              <TabsContent value="voters" className="mt-4">
+                {voters && voters.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Voted at</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
-                      {category.candidates.map((candidate) => (
-                        <TableRow key={candidate.id}>
-                          <TableCell className="w-10 text-muted-foreground">
-                            #{candidate.candidateNumber}
+                      {voters.map((voter) => (
+                        <TableRow key={voter.email + voter.votedAt.toISOString()}>
+                          <TableCell>{voter.email}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {voter.votedAt.toLocaleString()}
                           </TableCell>
-                          <TableCell>{candidate.fullName}</TableCell>
-                          <TableCell className="text-right font-medium">{candidate.votes}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {canSeeVoters && (
-          <TabsContent value="voters" className="mt-4">
-            {voters && voters.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Voted at</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {voters.map((voter) => (
-                    <TableRow key={voter.email + voter.votedAt.toISOString()}>
-                      <TableCell>{voter.email}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {voter.votedAt.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">No one has voted yet.</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No one has voted yet.</p>
+                )}
+              </TabsContent>
             )}
-          </TabsContent>
-        )}
-      </Tabs>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

@@ -20,3 +20,16 @@ export async function getAdminUsersWithEmail(): Promise<AdminUserRow[]> {
     order by au.created_at asc
   `;
 }
+
+/** Looks up display emails for a set of admin_users.id values (e.g. an
+ * event's createdById/updatedById) in one query, for EntityMetadata. */
+export async function getAdminEmailsByIds(adminUserIds: string[]): Promise<Map<string, string>> {
+  if (adminUserIds.length === 0) return new Map();
+  const rows = await prisma.$queryRaw<{ id: string; email: string }[]>`
+    select au.id as "id", u.email as "email"
+    from admin_users au
+    join auth.users u on u.id = au.auth_user_id
+    where au.id = any(${adminUserIds}::uuid[])
+  `;
+  return new Map(rows.map((row) => [row.id, row.email]));
+}

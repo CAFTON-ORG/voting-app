@@ -61,6 +61,13 @@ model Event {
   votingOpensAt         DateTime?       @map("voting_opens_at") @db.Timestamptz(3)
   votingClosesAt        DateTime?       @map("voting_closes_at") @db.Timestamptz(3)
   finalizedAt           DateTime?       @map("finalized_at") @db.Timestamptz(3)
+  // Soft-hide, deliberately independent of `state` — an archived event's
+  // voting rules/history don't change, it's just removed from the default
+  // events list. Never touched by the state-machine actions in
+  // src/actions/events/state.ts.
+  archivedAt            DateTime?       @map("archived_at") @db.Timestamptz(3)
+  createdById           String?         @map("created_by_id") @db.Uuid
+  updatedById           String?         @map("updated_by_id") @db.Uuid
   createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -70,6 +77,11 @@ model Event {
   ballots        Ballot[]
   accessCodes    VotingAccessCode[]
   auditLogs      AuditLog[]
+  // SetNull, matching AuditLog's own FKs to AdminUser: an event's history
+  // must survive the admin who created/edited it later being deactivated
+  // or removed.
+  createdBy      AdminUser?           @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      AdminUser?           @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("events")
 }
@@ -77,10 +89,11 @@ model Event {
 /// A category within an event ("Mr. SIT", "Ms. SIT"). Data-driven — never
 /// hardcoded in application logic.
 model CandidateCategory {
-  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId      String @map("event_id") @db.Uuid
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String  @map("event_id") @db.Uuid
   name         String
-  displayOrder Int    @default(0) @map("display_order")
+  description  String? @db.Text
+  displayOrder Int     @default(0) @map("display_order")
 
   event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   candidates Candidate[]
@@ -99,6 +112,7 @@ model Candidate {
   photoUrl        String?  @map("photo_url")
   programYear     String?  @map("program_year")
   tagline         String?
+  bio             String?  @db.Text
   isActive        Boolean  @default(true) @map("is_active")
   displayOrder    Int      @default(0) @map("display_order")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -172,6 +186,8 @@ model AdminUser {
 
   invitationsSent AdminInvitation[] @relation("InvitedBy")
   auditLogs       AuditLog[]
+  eventsCreated   Event[]           @relation("EventCreatedBy")
+  eventsUpdated   Event[]           @relation("EventUpdatedBy")
 
   @@map("admin_users")
 }

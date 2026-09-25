@@ -1,36 +1,72 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/admin/user-avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, SortableHeader } from "@/components/admin/data-table";
 
 export type AuditRow = {
   id: string;
   action: string;
   eventName: string;
+  actorEmail: string | null;
   actorRole: string;
+  metadata: Record<string, unknown>;
   createdAt: Date;
 };
+
+function actionLabel(action: string) {
+  return action.toLowerCase().split("_").join(" ");
+}
+
+function ActionCell({ row }: { row: AuditRow }) {
+  if (row.action === "EVENT_RESCHEDULED" && row.metadata.previous && row.metadata.next) {
+    const prev = row.metadata.previous as { votingOpensAt?: string };
+    const next = row.metadata.next as { votingOpensAt?: string };
+    return (
+      <div>
+        <p className="font-medium capitalize">{actionLabel(row.action)}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {prev.votingOpensAt && new Date(prev.votingOpensAt).toLocaleString()} →{" "}
+          {next.votingOpensAt && new Date(next.votingOpensAt).toLocaleString()}
+        </p>
+      </div>
+    );
+  }
+  return <span className="font-medium capitalize">{actionLabel(row.action)}</span>;
+}
 
 // See events-table.tsx for why these column defs live in a Client
 // Component rather than the Server Component page that fetches the data.
 const columns: ColumnDef<AuditRow>[] = [
   {
+    accessorKey: "actorEmail",
+    header: "Actor",
+    cell: ({ row }) =>
+      row.original.actorEmail ? (
+        <div className="flex items-center gap-2">
+          <UserAvatar label={row.original.actorEmail} size="sm" />
+          <div>
+            <p className="text-sm">{row.original.actorEmail}</p>
+            <p className="text-xs text-muted-foreground">{row.original.actorRole}</p>
+          </div>
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground">System</span>
+      ),
+  },
+  {
     accessorKey: "action",
     header: ({ column }) => (
       <SortableHeader label="Action" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
     ),
-    cell: ({ row }) => <span className="font-medium">{row.original.action}</span>,
+    cell: ({ row }) => <ActionCell row={row.original} />,
   },
   {
     accessorKey: "eventName",
     header: "Event",
     cell: ({ row }) => <span className="text-muted-foreground">{row.original.eventName}</span>,
-  },
-  {
-    accessorKey: "actorRole",
-    header: "Actor role",
-    cell: ({ row }) => <Badge variant="outline">{row.original.actorRole}</Badge>,
   },
   {
     accessorKey: "createdAt",
@@ -45,13 +81,37 @@ const columns: ColumnDef<AuditRow>[] = [
   },
 ];
 
-export function AuditLogTable({ data }: { data: AuditRow[] }) {
+export function AuditLogTable({ data, actions }: { data: AuditRow[]; actions: string[] }) {
+  const [actionFilter, setActionFilter] = useState("all");
+
+  const filtered = useMemo(
+    () => (actionFilter === "all" ? data : data.filter((row) => row.action === actionFilter)),
+    [data, actionFilter]
+  );
+
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      searchPlaceholder="Search audit log…"
-      emptyMessage="No audit entries yet."
-    />
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <Select value={actionFilter} onValueChange={setActionFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All actions</SelectItem>
+            {actions.map((action) => (
+              <SelectItem key={action} value={action}>
+                {actionLabel(action)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        searchPlaceholder="Search audit log…"
+        emptyMessage="No audit entries yet."
+      />
+    </div>
   );
 }

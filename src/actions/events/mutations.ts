@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
-import { createEventSchema, editEventSchema, scheduleEventSchema } from "@/lib/validation/events";
+import {
+  createEventSchema,
+  editEventSchema,
+  scheduleEventSchema,
+  rescheduleEventSchema,
+} from "@/lib/validation/events";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
 export async function createEventAction(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -19,6 +24,8 @@ export async function createEventAction(input: unknown): Promise<ActionResult<{ 
           allowedDomains: data.allowedDomains,
           eligibilityMode: "DOMAIN_ONLY",
           state: "DRAFT",
+          createdById: admin.adminUserId,
+          updatedById: admin.adminUserId,
         },
       });
       await tx.auditLog.create({
@@ -59,6 +66,7 @@ export async function editEventAction(input: unknown): Promise<ActionResult> {
           name: data.name,
           allowedDomains: data.allowedDomains,
           showPublicBallotCount: data.showPublicBallotCount,
+          updatedById: admin.adminUserId,
         },
       });
       await tx.auditLog.create({
@@ -78,9 +86,10 @@ export async function editEventAction(input: unknown): Promise<ActionResult> {
   }
 }
 
-/** DRAFT -> SCHEDULED. Schedule can only be (re-)set while still DRAFT —
- * per the approved state machine, changing the schedule once voting has
- * ever been OPEN is not a normal action. */
+/** DRAFT -> SCHEDULED. The *first* schedule can only be set while still
+ * DRAFT — after that, adjusting it goes through rescheduleEventAction
+ * below, which requires the event to already be SCHEDULED (not OPEN or
+ * later) and logs old vs. new for the audit trail. */
 export async function scheduleEventAction(input: unknown): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
@@ -89,7 +98,7 @@ export async function scheduleEventAction(input: unknown): Promise<ActionResult>
     await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
       if (event.state !== "DRAFT") {
-        throw new Error("An event's schedule can only be set while it is in DRAFT.");
+        throw new Error("An event's initial schedule can only be set while it is in DRAFT.");
       }
       await tx.event.update({
         where: { id: data.eventId },
@@ -97,6 +106,7 @@ export async function scheduleEventAction(input: unknown): Promise<ActionResult>
           state: "SCHEDULED",
           votingOpensAt: data.votingOpensAt,
           votingClosesAt: data.votingClosesAt,
+          updatedById: admin.adminUserId,
         },
       });
       await tx.auditLog.create({
@@ -116,12 +126,108 @@ export async function scheduleEventAction(input: unknown): Promise<ActionResult>
   }
 }
 
+/** Adjusts an already-SCHEDULED event's dates — deliberately only while
+ * SCHEDULED, never OPEN/PAUSED/CLOSED/FINALIZED: once voting has ever
+ * been open, silently moving the goalposts on when it was open is exactly
+ * the kind of thing that must never happen without it being a completely
+ * different, far more visible action (there isn't one — OPEN's schedule
+ * is fixed once set). Logs old -> new so the audit trail shows the actual
+ * change, not just the new values. */
+export async function rescheduleEventAction(input: unknown): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_EVENT_CONFIG");
+    const data = rescheduleEventSchema.parse(input);
+
+    await prisma.$transaction(async (tx) => {
+      const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
+      if (event.state !== "SCHEDULED") {
+        throw new Error("The schedule can only be adjusted before voting opens.");
+      }
+      const previous = {
+        votingOpensAt: event.votingOpensAt,
+        votingClosesAt: event.votingClosesAt,
+      };
+      await tx.event.update({
+        where: { id: data.eventId },
+        data: {
+          votingOpensAt: data.votingOpensAt,
+          votingClosesAt: data.votingClosesAt,
+          updatedById: admin.adminUserId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          eventId: data.eventId,
+          actorAdminId: admin.adminUserId,
+          action: "EVENT_RESCHEDULED",
+          metadata: {
+            previous,
+            next: { votingOpensAt: data.votingOpensAt, votingClosesAt: data.votingClosesAt },
+          },
+        },
+      });
+    });
+
+    revalidatePath(`/admin/events/${data.eventId}`);
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not reschedule the event."));
+  }
+}
+
+/** Soft-hide, independent of `state` (see the Event.archivedAt schema
+ * comment) — an archived CLOSED/FINALIZED event keeps all of its history
+ * and results, it just drops out of the default events list. Restricted
+ * to CLOSED/FINALIZED: archiving something still in progress would hide
+ * an event voters or admins might still need to act on. */
+export async function archiveEventAction(eventId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_EVENT_CONFIG");
+    await prisma.$transaction(async (tx) => {
+      const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
+      if (event.state !== "CLOSED" && event.state !== "FINALIZED") {
+        throw new Error("Only a CLOSED or FINALIZED event can be archived.");
+      }
+      await tx.event.update({
+        where: { id: eventId },
+        data: { archivedAt: new Date(), updatedById: admin.adminUserId },
+      });
+      await tx.auditLog.create({
+        data: { eventId, actorAdminId: admin.adminUserId, action: "EVENT_ARCHIVED", metadata: {} },
+      });
+    });
+    revalidatePath("/admin");
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not archive the event."));
+  }
+}
+
+export async function unarchiveEventAction(eventId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_EVENT_CONFIG");
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({
+        where: { id: eventId },
+        data: { archivedAt: null, updatedById: admin.adminUserId },
+      });
+      await tx.auditLog.create({
+        data: { eventId, actorAdminId: admin.adminUserId, action: "EVENT_UNARCHIVED", metadata: {} },
+      });
+    });
+    revalidatePath("/admin");
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not restore the event."));
+  }
+}
+
 /** Hard delete, restricted to DRAFT/SCHEDULED — voting can only ever
  * happen while OPEN, so an event in either of those states structurally
  * cannot have any ballots yet. The ballot-count check is defense in
  * depth for that invariant, not the only thing enforcing it. Anything
  * that has ever been OPEN is never deletable, full stop — "close it"
- * (and eventually finalize) is the only path forward from there. */
+ * (and eventually archive it) is the only path forward from there. */
 export async function deleteEventAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
