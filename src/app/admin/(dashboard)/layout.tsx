@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, ScrollText } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { NavUser } from "@/components/admin/nav-user";
 import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
+import { SidebarNav } from "@/components/admin/sidebar-nav";
 import {
   SidebarProvider,
   Sidebar,
@@ -14,7 +14,6 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
@@ -24,11 +23,9 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
   const admin = await requireAdmin();
 
   const navItems = [
-    { href: "/admin", label: "Events", icon: LayoutDashboard },
-    { href: "/admin/team", label: "Team", icon: Users },
-    ...(roleCan(admin.role, "VIEW_AUDIT_LOG")
-      ? [{ href: "/admin/audit-log", label: "Audit Log", icon: ScrollText }]
-      : []),
+    { href: "/admin", label: "Events" },
+    { href: "/admin/team", label: "Team" },
+    ...(roleCan(admin.role, "VIEW_AUDIT_LOG") ? [{ href: "/admin/audit-log", label: "Audit Log" }] : []),
   ];
 
   return (
@@ -45,18 +42,7 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild tooltip={item.label}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              <SidebarNav items={navItems} />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

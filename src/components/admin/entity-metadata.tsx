@@ -1,31 +1,31 @@
 export function EntityMetadata({
-  createdByEmail,
+  createdByName,
   createdAt,
-  updatedByEmail,
+  updatedByName,
   updatedAt,
 }: {
-  createdByEmail?: string | null;
+  createdByName?: string | null;
   createdAt?: Date | null;
-  updatedByEmail?: string | null;
+  updatedByName?: string | null;
   updatedAt?: Date | null;
 }) {
   // Nothing to show if we never captured a creator (e.g. events created
   // before this field existed) — silence, not a broken-looking "by —".
-  if (!createdByEmail && !updatedByEmail) return null;
+  if (!createdByName && !updatedByName) return null;
 
   const showUpdated =
-    updatedByEmail && updatedAt && createdAt && updatedAt.getTime() !== createdAt.getTime();
+    updatedByName && updatedAt && createdAt && updatedAt.getTime() !== createdAt.getTime();
 
   return (
     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-      {createdByEmail && createdAt && (
+      {createdByName && createdAt && (
         <p>
-          Created by {createdByEmail} · {createdAt.toLocaleString()}
+          Created by {createdByName} · {createdAt.toLocaleString()}
         </p>
       )}
       {showUpdated && (
         <p>
-          Last edited by {updatedByEmail} · {updatedAt.toLocaleString()}
+          Last edited by {updatedByName} · {updatedAt.toLocaleString()}
         </p>
       )}
     </div>

@@ -160,7 +160,7 @@ export async function createCandidateAction(input: unknown): Promise<ActionResul
       });
 
       const created = await tx.candidate.create({
-        data: { ...data, categoryId: category.id },
+        data: { ...data, categoryId: category.id, createdById: admin.adminUserId },
       });
       await tx.auditLog.create({
         data: {

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Presentation } from "lucide-react";
+import { Presentation, ChevronLeft, BarChart3, Users } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
-import { getAdminEmailsByIds } from "@/lib/admin/queries";
+import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { getEventReadiness } from "@/lib/events/readiness";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
@@ -17,6 +17,8 @@ import { EditEventDialog } from "@/components/admin/edit-event-dialog";
 import { DeleteEventButton } from "@/components/admin/delete-event-button";
 import { ArchiveEventButton } from "@/components/admin/archive-event-button";
 import { EventReadinessCard } from "@/components/admin/event-readiness-card";
+import { EventAvatar } from "@/components/admin/event-avatar";
+import { EmptyState } from "@/components/admin/empty-state";
 import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { StatCards } from "@/components/admin/stat-cards";
@@ -64,14 +66,17 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
   const canManageCandidatesLimited = can("MANAGE_CANDIDATES_LIMITED") && event.state !== "FINALIZED";
 
   const canEdit = can("MANAGE_EVENT_CONFIG") && event.state !== "FINALIZED";
-  const canDelete = can("MANAGE_EVENT_CONFIG") && (event.state === "DRAFT" || event.state === "SCHEDULED");
+  const canDelete =
+    can("MANAGE_EVENT_CONFIG") &&
+    ((event.state === "DRAFT" || event.state === "SCHEDULED") ||
+      (Boolean(event.archivedAt) && ballotCount === 0));
   const canArchive = can("MANAGE_EVENT_CONFIG") && (event.state === "CLOSED" || event.state === "FINALIZED");
   const canReschedule = can("MANAGE_EVENT_CONFIG") && event.state === "SCHEDULED";
 
   const totalCandidates = event.categories.reduce((sum, c) => sum + c.candidates.length, 0);
   const readiness = getEventReadiness(event);
 
-  const adminEmails = await getAdminEmailsByIds(
+  const adminIdentities = await getAdminIdentitiesByIds(
     [event.createdById, event.updatedById].filter((v): v is string => Boolean(v))
   );
 
@@ -99,18 +104,27 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
   return (
     <div className="flex flex-col gap-6">
+      <Link
+        href="/admin"
+        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="size-4" />
+        Back to Events
+      </Link>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-3">
+            <EventAvatar name={event.name} />
             <h1 className="text-xl font-semibold">{event.name}</h1>
             <StatusBadge status={event.archivedAt ? "ARCHIVED" : event.state} />
             <Badge variant="outline">{event.eligibilityMode}</Badge>
           </div>
           <div className="mt-1">
             <EntityMetadata
-              createdByEmail={event.createdById ? adminEmails.get(event.createdById) : null}
+              createdByName={event.createdById && adminIdentities.has(event.createdById) ? displayName(adminIdentities.get(event.createdById)!) : null}
               createdAt={event.createdAt}
-              updatedByEmail={event.updatedById ? adminEmails.get(event.updatedById) : null}
+              updatedByName={event.updatedById && adminIdentities.has(event.updatedById) ? displayName(adminIdentities.get(event.updatedById)!) : null}
               updatedAt={event.updatedAt}
             />
           </div>
@@ -144,7 +158,6 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
           { label: "Categories", value: event.categories.length },
           { label: "Candidates", value: totalCandidates },
           { label: "Votes submitted", value: ballotCount },
-          { label: "Voting status", value: event.archivedAt ? "Archived" : event.state },
         ]}
       />
 
@@ -166,7 +179,12 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
           {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
 
-          <EventStateActions eventId={event.id} state={event.state} role={admin.role} />
+          <EventStateActions
+            eventId={event.id}
+            state={event.state}
+            role={admin.role}
+            isReady={readiness.isReady}
+          />
         </div>
 
         <div className="lg:col-span-8">
@@ -199,11 +217,15 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
             <TabsContent value="results" className="mt-4">
               {!results && (
-                <p className="text-sm text-muted-foreground">
-                  {votingEverActive
-                    ? "Your role does not include live results while voting is open."
-                    : "Results are not yet available."}
-                </p>
+                <EmptyState
+                  icon={BarChart3}
+                  title={votingEverActive ? "Live results are hidden" : "Results not available yet"}
+                  description={
+                    votingEverActive
+                      ? "Your role does not include live results while voting is open."
+                      : "Results will appear here once voting has started."
+                  }
+                />
               )}
               {results && (
                 <div className="flex flex-col gap-6">
@@ -251,7 +273,11 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No one has voted yet.</p>
+                  <EmptyState
+                    icon={Users}
+                    title="No one has voted yet"
+                    description="Participation will show up here as voters cast their ballots."
+                  />
                 )}
               </TabsContent>
             )}

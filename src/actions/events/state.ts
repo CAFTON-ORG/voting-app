@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
+import { getEventReadiness } from "@/lib/events/readiness";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
 /** Every sensitive transition: permission check, current-state guard,
@@ -15,9 +16,17 @@ export async function openVotingAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("OPEN_VOTING");
     await prisma.$transaction(async (tx) => {
-      const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
+      const event = await tx.event.findUniqueOrThrow({
+        where: { id: eventId },
+        include: { categories: { include: { candidates: { select: { isActive: true } } } } },
+      });
       if (event.state !== "SCHEDULED") {
         throw new Error("Voting can only be opened from the SCHEDULED state.");
+      }
+      const readiness = getEventReadiness(event);
+      if (!readiness.isReady) {
+        const missing = readiness.items.filter((item) => !item.complete).map((item) => item.label);
+        throw new Error(`This event isn't ready to open: ${missing.join("; ")}.`);
       }
       await tx.event.update({ where: { id: eventId }, data: { state: "OPEN" } });
       await tx.auditLog.create({

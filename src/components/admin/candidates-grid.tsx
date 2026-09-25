@@ -187,7 +187,13 @@ export function CandidatesGrid({
         </ul>
       )}
 
+      {/* Remounts the sheet (resetting its internal form state) whenever the
+          edit target changes, or, for "create", whenever the category list
+          itself changes — otherwise a sheet mounted while categories was
+          still empty would keep defaulting its Category select to nothing
+          even after the first category gets added. */}
       <CandidateFormSheet
+        key={editing?.id ?? `create:${categories.map((c) => c.id).join(",")}`}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         eventId={eventId}

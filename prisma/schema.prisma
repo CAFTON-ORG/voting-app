@@ -115,11 +115,15 @@ model Candidate {
   bio             String?  @db.Text
   isActive        Boolean  @default(true) @map("is_active")
   displayOrder    Int      @default(0) @map("display_order")
+  createdById     String?  @map("created_by_id") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   category   CandidateCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   event      Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   selections BallotSelection[]
+  // SetNull, matching Event's own createdBy: a candidate's "who added
+  // this" record must survive that admin later being deactivated.
+  createdBy  AdminUser?        @relation("CandidateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([eventId, categoryId, candidateNumber])
   @@index([eventId, categoryId])
@@ -188,6 +192,7 @@ model AdminUser {
   auditLogs       AuditLog[]
   eventsCreated   Event[]           @relation("EventCreatedBy")
   eventsUpdated   Event[]           @relation("EventUpdatedBy")
+  candidatesAdded Candidate[]       @relation("CandidateCreatedBy")
 
   @@map("admin_users")
 }

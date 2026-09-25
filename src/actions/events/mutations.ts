@@ -222,21 +222,26 @@ export async function unarchiveEventAction(eventId: string): Promise<ActionResul
   }
 }
 
-/** Hard delete, restricted to DRAFT/SCHEDULED — voting can only ever
- * happen while OPEN, so an event in either of those states structurally
- * cannot have any ballots yet. The ballot-count check is defense in
- * depth for that invariant, not the only thing enforcing it. Anything
- * that has ever been OPEN is never deletable, full stop — "close it"
- * (and eventually archive it) is the only path forward from there. */
+/** Hard delete. Always requires zero ballots — the one invariant that
+ * actually matters, since a Ballot row is the only thing that can be
+ * lost. DRAFT/SCHEDULED events satisfy that structurally (they can never
+ * have opened yet). An archived CLOSED/FINALIZED event may also qualify
+ * if it turns out nobody ever voted (e.g. a test/duplicate event) — its
+ * audit trail survives the delete via AuditLog.eventId's SetNull, so
+ * nothing about its history is actually lost. A live OPEN/PAUSED event is
+ * never eligible regardless of ballot count: it could still receive a
+ * vote at any moment, so "currently zero" is not a stable guarantee. */
 export async function deleteEventAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
 
     await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
-      if (event.state !== "DRAFT" && event.state !== "SCHEDULED") {
+      const neverOpened = event.state === "DRAFT" || event.state === "SCHEDULED";
+      const archivedAndDone = Boolean(event.archivedAt) && (event.state === "CLOSED" || event.state === "FINALIZED");
+      if (!neverOpened && !archivedAndDone) {
         throw new Error(
-          "Only events that have never opened for voting (DRAFT or SCHEDULED) can be deleted."
+          "Only a draft/scheduled event, or an archived event with no submitted ballots, can be deleted."
         );
       }
       const ballotCount = await tx.ballot.count({ where: { eventId } });

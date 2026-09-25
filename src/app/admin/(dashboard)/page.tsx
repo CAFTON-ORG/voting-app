@@ -1,14 +1,13 @@
-import Link from "next/link";
 import { LayoutDashboard } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount } from "@/lib/results/queries";
-import { getAdminEmailsByIds } from "@/lib/admin/queries";
-import { Button } from "@/components/ui/button";
+import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { PageTitle } from "@/components/admin/page-title";
 import { StatCards } from "@/components/admin/stat-cards";
 import { EventsTable, type EventRow } from "@/components/admin/events-table";
+import { CreateEventDialog } from "@/components/admin/create-event-dialog";
 
 export default async function AdminEventsPage() {
   const admin = await requireAdmin();
@@ -20,7 +19,7 @@ export default async function AdminEventsPage() {
   ]);
   const ballotCounts = await Promise.all(events.map((event) => getBallotCount(event.id)));
   const creatorIds = [...new Set(events.map((e) => e.createdById).filter((v): v is string => Boolean(v)))];
-  const creatorEmails = await getAdminEmailsByIds(creatorIds);
+  const creatorIdentities = await getAdminIdentitiesByIds(creatorIds);
 
   const rows: EventRow[] = events.map((event, index) => ({
     id: event.id,
@@ -29,8 +28,14 @@ export default async function AdminEventsPage() {
     eligibilityMode: event.eligibilityMode,
     votes: ballotCounts[index],
     archived: Boolean(event.archivedAt),
-    createdByEmail: event.createdById ? (creatorEmails.get(event.createdById) ?? null) : null,
-    canDelete: can("MANAGE_EVENT_CONFIG") && (event.state === "DRAFT" || event.state === "SCHEDULED"),
+    createdByName:
+      event.createdById && creatorIdentities.has(event.createdById)
+        ? displayName(creatorIdentities.get(event.createdById)!)
+        : null,
+    canDelete:
+      can("MANAGE_EVENT_CONFIG") &&
+      ((event.state === "DRAFT" || event.state === "SCHEDULED") ||
+        (Boolean(event.archivedAt) && ballotCounts[index] === 0)),
     canArchive:
       can("MANAGE_EVENT_CONFIG") &&
       (Boolean(event.archivedAt) || event.state === "CLOSED" || event.state === "FINALIZED"),
@@ -44,11 +49,7 @@ export default async function AdminEventsPage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageTitle icon={LayoutDashboard}>Events</PageTitle>
-        {can("MANAGE_EVENT_CONFIG") && (
-          <Button asChild>
-            <Link href="/admin/events/new">New Event</Link>
-          </Button>
-        )}
+        {can("MANAGE_EVENT_CONFIG") && <CreateEventDialog />}
       </div>
       <StatCards
         stats={[

@@ -24,6 +24,7 @@ export default async function AdminTeamPage() {
       (a): MemberRow => ({
         id: a.id,
         email: a.email,
+        fullName: a.fullName,
         role: a.role,
         status: a.active ? "ACTIVE" : "EXPIRED",
         kind: "member",
@@ -33,6 +34,7 @@ export default async function AdminTeamPage() {
       (invite): MemberRow => ({
         id: invite.id,
         email: invite.email,
+        fullName: null,
         role: invite.role,
         status: invite.expiresAt < new Date() ? "EXPIRED" : "PENDING",
         kind: "invitation",

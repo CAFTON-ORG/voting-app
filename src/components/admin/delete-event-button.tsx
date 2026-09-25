@@ -18,7 +18,7 @@ export function DeleteEventButton({ eventId, eventName }: { eventId: string; eve
         </Button>
       }
       title={`Delete "${eventName}"?`}
-      description="This permanently removes the event and its candidates. Only available before voting has ever opened, and only when it has no submitted ballots."
+      description="This permanently removes the event and its candidates. Only available when it has no submitted ballots."
       confirmLabel="Delete Event"
       variant="destructive"
       onConfirm={async () => {

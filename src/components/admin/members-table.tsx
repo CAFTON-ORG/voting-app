@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -22,6 +23,7 @@ import type { AdminRole } from "@prisma/client";
 export type MemberRow = {
   id: string;
   email: string;
+  fullName: string | null;
   role: AdminRole;
   status: "ACTIVE" | "PENDING" | "EXPIRED";
   kind: "member" | "invitation";
@@ -29,17 +31,35 @@ export type MemberRow = {
 
 export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage: boolean }) {
   const router = useRouter();
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filtered = useMemo(() => {
+    return data.filter((row) => {
+      if (roleFilter !== "all" && row.role !== roleFilter) return false;
+      if (statusFilter !== "all" && row.status !== statusFilter) return false;
+      return true;
+    });
+  }, [data, roleFilter, statusFilter]);
 
   const columns: ColumnDef<MemberRow>[] = [
     {
       accessorKey: "email",
       header: "Account",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <UserAvatar label={row.original.email} size="sm" />
-          <span className="text-sm">{row.original.email}</span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const label = row.original.fullName || row.original.email;
+        return (
+          <div className="flex items-center gap-2">
+            <UserAvatar label={label} size="sm" />
+            <div>
+              <p className="text-sm">{label}</p>
+              {row.original.fullName && (
+                <p className="text-xs text-muted-foreground">{row.original.email}</p>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "role",
@@ -96,7 +116,7 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
                       Remove member
                     </DropdownMenuItem>
                   }
-                  title={`Remove ${member.email}?`}
+                  title={`Remove ${member.fullName || member.email}?`}
                   description="They immediately lose admin access. Their history (audit entries, events they created) is kept."
                   confirmLabel="Remove"
                   variant="destructive"
@@ -148,6 +168,37 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
   ];
 
   return (
-    <DataTable columns={columns} data={data} searchPlaceholder="Search members…" emptyMessage="No members yet." />
+    <DataTable
+      columns={columns}
+      data={filtered}
+      searchPlaceholder="Search members…"
+      emptyMessage="No members yet."
+      actions={
+        <div className="flex gap-2">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              <SelectItem value="ADMIN">ADMIN</SelectItem>
+              <SelectItem value="MODERATOR">MODERATOR</SelectItem>
+              <SelectItem value="AUDITOR">AUDITOR</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="EXPIRED">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      }
+    />
   );
 }

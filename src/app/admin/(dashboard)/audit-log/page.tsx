@@ -2,7 +2,7 @@ import { ScrollText } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
-import { getAdminEmailsByIds } from "@/lib/admin/queries";
+import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { PageTitle } from "@/components/admin/page-title";
 import { AuditLogTable, type AuditRow } from "@/components/admin/audit-log-table";
 
@@ -19,13 +19,16 @@ export default async function AdminAuditLogPage() {
   });
 
   const actorIds = [...new Set(entries.map((e) => e.actorAdmin?.id).filter((v): v is string => Boolean(v)))];
-  const actorEmails = await getAdminEmailsByIds(actorIds);
+  const actorIdentities = await getAdminIdentitiesByIds(actorIds);
 
   const rows: AuditRow[] = entries.map((entry) => ({
     id: entry.id,
     action: entry.action,
     eventName: entry.event?.name ?? "—",
-    actorEmail: entry.actorAdmin ? (actorEmails.get(entry.actorAdmin.id) ?? null) : null,
+    actorName:
+      entry.actorAdmin && actorIdentities.has(entry.actorAdmin.id)
+        ? displayName(actorIdentities.get(entry.actorAdmin.id)!)
+        : null,
     actorRole: entry.actorAdmin?.role ?? "—",
     metadata: (entry.metadata as Record<string, unknown>) ?? {},
     createdAt: entry.createdAt,

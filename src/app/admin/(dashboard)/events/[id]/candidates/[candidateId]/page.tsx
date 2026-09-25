@@ -6,6 +6,8 @@ import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { EntityMetadata } from "@/components/admin/entity-metadata";
+import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-edit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -21,6 +23,14 @@ export default async function CandidateDetailPage(
     include: { category: true, event: true, _count: { select: { selections: true } } },
   });
   if (!candidate) notFound();
+
+  const creatorIdentities = await getAdminIdentitiesByIds(
+    candidate.createdById ? [candidate.createdById] : []
+  );
+  const createdByName =
+    candidate.createdById && creatorIdentities.has(candidate.createdById)
+      ? displayName(creatorIdentities.get(candidate.createdById)!)
+      : null;
 
   const votingEnded = candidate.event.state === "CLOSED" || candidate.event.state === "FINALIZED";
   const votingEverActive = candidate.event.state === "OPEN" || candidate.event.state === "PAUSED";
@@ -130,8 +140,12 @@ export default async function CandidateDetailPage(
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">Activity</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Added {candidate.createdAt.toLocaleString()}
+            <CardContent>
+              {createdByName ? (
+                <EntityMetadata createdByName={createdByName} createdAt={candidate.createdAt} />
+              ) : (
+                <p className="text-xs text-muted-foreground">Added {candidate.createdAt.toLocaleString()}</p>
+              )}
             </CardContent>
           </Card>
         </div>

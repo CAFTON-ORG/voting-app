@@ -25,10 +25,12 @@ export function EventStateActions({
   eventId,
   state,
   role,
+  isReady,
 }: {
   eventId: string;
   state: EventState;
   role: AdminRole;
+  isReady: boolean;
 }) {
   const can = (permission: Parameters<typeof roleCan>[1]) => roleCan(role, permission);
   const [pending, startTransition] = useTransition();
@@ -48,7 +50,11 @@ export function EventStateActions({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         {state === "SCHEDULED" && can("OPEN_VOTING") && (
-          <Button disabled={pending} onClick={() => run(() => openVotingAction(eventId))}>
+          <Button
+            disabled={pending || !isReady}
+            title={isReady ? undefined : "Finish the setup checklist before opening voting."}
+            onClick={() => run(() => openVotingAction(eventId))}
+          >
             Open Voting
           </Button>
         )}
@@ -92,6 +98,12 @@ export function EventStateActions({
           />
         )}
       </div>
+
+      {state === "SCHEDULED" && can("OPEN_VOTING") && !isReady && (
+        <p className="text-sm text-muted-foreground">
+          Finish the setup checklist before opening voting for this event.
+        </p>
+      )}
 
       <ConfirmDialog
         open={reopenOpen}
