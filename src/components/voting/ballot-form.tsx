@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
 import { castBallotAction } from "@/actions/voting/cast-ballot";
 import { RadioGroup } from "@/components/ui/radio-group";
@@ -14,7 +15,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Stepper } from "./stepper";
-import { CandidateAvatar } from "./candidate-avatar";
 import { VotingProgress } from "./voting-progress";
 import { BallotCandidateCard } from "./ballot-candidate-card";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
@@ -120,25 +120,28 @@ export function BallotForm({
     return (
       <div className="flex min-h-svh flex-col">
         <PublicHeader />
-        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-          <CheckCircle2 className="size-12 text-primary" />
-          <h1 className="mt-6 text-xl font-semibold text-balance">Your vote has been submitted.</h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Thank you for participating in <span className="font-medium text-foreground">{event.name}</span>. Your
-            ballot was securely recorded.
-          </p>
-          {reference && (
-            <div className="mt-6 rounded-lg border bg-muted/30 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Reference</p>
-              <p className="font-mono text-sm font-medium">{reference}</p>
-            </div>
-          )}
-          <p className="mt-4 text-xs text-muted-foreground">
-            Submitted {new Date(submittedAt).toLocaleString()}
-          </p>
-          <Button asChild variant="outline" className="mt-8">
-            <a href={`/events/${event.slug}`}>Return to Event</a>
-          </Button>
+        <main className="mx-auto w-full max-w-md flex-1 px-6 py-12">
+          <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
+          <div className="mt-12 flex flex-col items-center text-center">
+            <CheckCircle2 className="size-12 text-primary" />
+            <h1 className="mt-6 text-xl font-semibold text-balance">Your vote has been submitted.</h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Thank you for participating in <span className="font-medium text-foreground">{event.name}</span>.
+              Your ballot was securely recorded.
+            </p>
+            {reference && (
+              <div className="mt-6 rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs text-muted-foreground">Reference</p>
+                <p className="font-mono text-sm font-medium">{reference}</p>
+              </div>
+            )}
+            <p className="mt-4 text-xs text-muted-foreground">
+              Submitted {new Date(submittedAt).toLocaleString()}
+            </p>
+            <Button asChild variant="outline" className="mt-8">
+              <a href={`/events/${event.slug}`}>Return to Event</a>
+            </Button>
+          </div>
         </main>
         <PublicFooter />
       </div>
@@ -160,8 +163,21 @@ export function BallotForm({
               const candidate = category.candidates.find((c) => c.id === selections[category.id]);
               if (!candidate) return null;
               return (
-                <li key={category.id} className="flex items-center gap-3 rounded-md border p-4">
-                  <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-12" />
+                <li key={category.id} className="flex items-center gap-4 rounded-lg border p-3">
+                  <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                    {candidate.photoUrl ? (
+                      <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-lg font-semibold text-muted-foreground">
+                        {candidate.fullName
+                          .split(" ")
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((p) => p[0]?.toUpperCase())
+                          .join("")}
+                      </div>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {category.name}
@@ -169,8 +185,11 @@ export function BallotForm({
                     <p className="mt-0.5 truncate font-medium">
                       #{candidate.candidateNumber} {candidate.fullName}
                     </p>
+                    {candidate.programYear && (
+                      <p className="truncate text-xs text-muted-foreground">{candidate.programYear}</p>
+                    )}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setStep("select")}>
+                  <Button variant="outline" size="sm" onClick={() => setStep("select")}>
                     Change
                   </Button>
                 </li>

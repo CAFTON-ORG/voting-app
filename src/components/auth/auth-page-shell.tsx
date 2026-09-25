@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Logo } from "@/components/shared/logo";
 
 /** One consistent shell for every sign-in-adjacent page (admin login,
  * accept-invitation, voter sign-in, auth error) — these previously each
@@ -22,8 +23,8 @@ export function AuthPageShell({
     <div className="flex min-h-svh items-center justify-center bg-muted/30 px-6 py-12">
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-sm font-bold text-background">
-            C
+          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background">
+            <Logo size={20} aria-hidden="true" />
           </div>
           <div>
             {eyebrow && (
