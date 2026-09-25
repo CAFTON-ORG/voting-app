@@ -1,27 +1,26 @@
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AcceptInvitationButton } from "@/components/admin/accept-invitation-button";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 export default async function AcceptInvitationPage() {
   const identity = await getTrustedIdentity();
 
   if (!identity) {
     return (
-      <div className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-        <h1 className="text-xl font-semibold">Accept admin invitation</h1>
-        <p className="text-sm text-muted-foreground">
-          Sign in with the Google account that received the invitation.
-        </p>
+      <AuthPageShell
+        eyebrow="Cafton"
+        title="Accept admin invitation"
+        description="Sign in with the Google account that received the invitation."
+      >
         <GoogleSignInButton redirectTo="/admin/accept-invitation" />
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-      <h1 className="text-xl font-semibold">Accept admin invitation</h1>
-      <p className="text-sm text-muted-foreground">Signed in as {identity.email}.</p>
+    <AuthPageShell eyebrow="Cafton" title="Accept admin invitation" description={`Signed in as ${identity.email}.`}>
       <AcceptInvitationButton />
-    </div>
+    </AuthPageShell>
   );
 }

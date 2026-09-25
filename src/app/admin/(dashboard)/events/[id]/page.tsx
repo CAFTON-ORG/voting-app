@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Presentation, ChevronLeft, BarChart3, Users } from "lucide-react";
+import { Presentation, ChevronLeft } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
@@ -11,28 +11,17 @@ import { getEventReadiness } from "@/lib/events/readiness";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
 import { RescheduleEventDialog } from "@/components/admin/reschedule-event-dialog";
-import { CategoryManager } from "@/components/admin/category-manager";
-import { CandidatesGrid } from "@/components/admin/candidates-grid";
+import { EventWorkspaceTabs } from "@/components/admin/event-workspace-tabs";
 import { EditEventDialog } from "@/components/admin/edit-event-dialog";
 import { DeleteEventButton } from "@/components/admin/delete-event-button";
 import { ArchiveEventButton } from "@/components/admin/archive-event-button";
 import { EventReadinessCard } from "@/components/admin/event-readiness-card";
 import { EventAvatar } from "@/components/admin/event-avatar";
-import { EmptyState } from "@/components/admin/empty-state";
 import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { StatCards } from "@/components/admin/stat-cards";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 
 export default async function AdminEventDetailPage(props: PageProps<"/admin/events/[id]">) {
   const { id } = await props.params;
@@ -80,7 +69,6 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
     [event.createdById, event.updatedById].filter((v): v is string => Boolean(v))
   );
 
-  const categoryOptions = event.categories.map((c) => ({ id: c.id, name: c.name }));
   const flatCandidates = event.categories.flatMap((category) =>
     category.candidates.map((candidate) => ({
       id: candidate.id,
@@ -188,100 +176,17 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
         </div>
 
         <div className="lg:col-span-8">
-          <Tabs defaultValue="candidates">
-            <TabsList>
-              <TabsTrigger value="candidates">Candidates</TabsTrigger>
-              <TabsTrigger value="categories">Categories</TabsTrigger>
-              <TabsTrigger value="results">Results</TabsTrigger>
-              {canSeeVoters && <TabsTrigger value="voters">Voters</TabsTrigger>}
-            </TabsList>
-
-            <TabsContent value="candidates" className="mt-4">
-              <CandidatesGrid
-                eventId={event.id}
-                categories={categoryOptions}
-                candidates={flatCandidates}
-                canManageFull={canManageCandidatesFull}
-                canManageLimited={canManageCandidatesLimited}
-              />
-            </TabsContent>
-
-            <TabsContent value="categories" className="mt-4">
-              <CategoryManager
-                eventId={event.id}
-                categories={categoryRows}
-                canManageFull={canManageCandidatesFull}
-                canManageLimited={canManageCandidatesLimited}
-              />
-            </TabsContent>
-
-            <TabsContent value="results" className="mt-4">
-              {!results && (
-                <EmptyState
-                  icon={BarChart3}
-                  title={votingEverActive ? "Live results are hidden" : "Results not available yet"}
-                  description={
-                    votingEverActive
-                      ? "Your role does not include live results while voting is open."
-                      : "Results will appear here once voting has started."
-                  }
-                />
-              )}
-              {results && (
-                <div className="flex flex-col gap-6">
-                  {results.map((category) => (
-                    <div key={category.id}>
-                      <p className="text-sm font-medium">{category.name}</p>
-                      <Table className="mt-2">
-                        <TableBody>
-                          {category.candidates.map((candidate) => (
-                            <TableRow key={candidate.id}>
-                              <TableCell className="w-10 text-muted-foreground">
-                                #{candidate.candidateNumber}
-                              </TableCell>
-                              <TableCell>{candidate.fullName}</TableCell>
-                              <TableCell className="text-right font-medium">{candidate.votes}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {canSeeVoters && (
-              <TabsContent value="voters" className="mt-4">
-                {voters && voters.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead className="text-right">Voted at</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {voters.map((voter) => (
-                        <TableRow key={voter.email + voter.votedAt.toISOString()}>
-                          <TableCell>{voter.email}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {voter.votedAt.toLocaleString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <EmptyState
-                    icon={Users}
-                    title="No one has voted yet"
-                    description="Participation will show up here as voters cast their ballots."
-                  />
-                )}
-              </TabsContent>
-            )}
-          </Tabs>
+          <EventWorkspaceTabs
+            eventId={event.id}
+            categories={categoryRows}
+            candidates={flatCandidates}
+            canManageFull={canManageCandidatesFull}
+            canManageLimited={canManageCandidatesLimited}
+            results={results}
+            votingEverActive={votingEverActive}
+            canSeeVoters={canSeeVoters}
+            voters={voters}
+          />
         </div>
       </div>
     </div>

@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LayoutGrid, List, Plus, Users } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, LayoutGrid, List, Plus, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CandidateCard, type CandidateCardData } from "@/components/admin/candidate-card";
-import { CandidateFormSheet, type CandidateFormValues } from "@/components/admin/candidate-form-sheet";
 import { EmptyState } from "@/components/admin/empty-state";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { CandidateAvatar } from "@/components/voting/candidate-avatar";
 
 type CategoryOption = { id: string; name: string };
+
+const PAGE_SIZE = 8;
 
 export function CandidatesGrid({
   eventId,
@@ -19,19 +21,22 @@ export function CandidatesGrid({
   candidates,
   canManageFull,
   canManageLimited,
+  onAdd,
+  onEdit,
 }: {
   eventId: string;
   categories: CategoryOption[];
   candidates: CandidateCardData[];
   canManageFull: boolean;
   canManageLimited: boolean;
+  onAdd: () => void;
+  onEdit: (candidate: CandidateCardData) => void;
 }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editing, setEditing] = useState<CandidateFormValues | undefined>();
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
@@ -43,24 +48,24 @@ export function CandidatesGrid({
     });
   }, [candidates, categoryFilter, statusFilter, search]);
 
-  function openCreate() {
-    setEditing(undefined);
-    setSheetOpen(true);
-  }
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Clamped directly at read time rather than reset via an effect when a
+  // filter changes — `page` can legitimately point past a now-shorter
+  // result set for one render, and this just never shows that as a blank page.
+  const safePage = Math.min(page, pageCount);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  function openEdit(candidate: CandidateCardData) {
-    const category = categories.find((c) => c.name === candidate.categoryName);
-    setEditing({
-      id: candidate.id,
-      categoryId: category?.id ?? "",
-      candidateNumber: candidate.candidateNumber,
-      fullName: candidate.fullName,
-      programYear: candidate.programYear ?? "",
-      tagline: candidate.tagline ?? "",
-      bio: candidate.bio ?? "",
-      photoUrl: candidate.photoUrl,
-    });
-    setSheetOpen(true);
+  function updateSearch(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+  function updateCategoryFilter(value: string) {
+    setCategoryFilter(value);
+    setPage(1);
+  }
+  function updateStatusFilter(value: string) {
+    setStatusFilter(value);
+    setPage(1);
   }
 
   return (
@@ -70,10 +75,10 @@ export function CandidatesGrid({
           <Input
             placeholder="Search candidates…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateSearch(e.target.value)}
             className="max-w-xs"
           />
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={updateCategoryFilter}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -86,7 +91,7 @@ export function CandidatesGrid({
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={updateStatusFilter}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -119,7 +124,7 @@ export function CandidatesGrid({
             </Button>
           </div>
           {canManageFull && categories.length > 0 && (
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onClick={onAdd}>
               <Plus className="size-3.5" />
               Add Candidate
             </Button>
@@ -143,7 +148,7 @@ export function CandidatesGrid({
           action={
             canManageFull &&
             categories.length > 0 && (
-              <Button size="sm" onClick={openCreate}>
+              <Button size="sm" onClick={onAdd}>
                 <Plus className="size-3.5" />
                 Add Candidate
               </Button>
@@ -152,32 +157,35 @@ export function CandidatesGrid({
         />
       ) : view === "grid" ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((candidate) => (
+          {paged.map((candidate) => (
             <CandidateCard
               key={candidate.id}
               candidate={candidate}
               canManageFull={canManageFull}
-              onEdit={() => openEdit(candidate)}
+              onEdit={() => onEdit(candidate)}
             />
           ))}
         </div>
       ) : (
         <ul className="flex flex-col divide-y rounded-lg border">
-          {filtered.map((candidate) => (
+          {paged.map((candidate) => (
             <li key={candidate.id} className="flex items-center justify-between gap-3 p-3">
               <div className="flex items-center gap-3">
                 <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-9" />
                 <div>
-                  <p className="text-sm font-medium">
+                  <Link
+                    href={`/admin/events/${eventId}/candidates/${candidate.id}`}
+                    className="text-sm font-medium hover:underline"
+                  >
                     #{candidate.candidateNumber} {candidate.fullName}
-                  </p>
+                  </Link>
                   <p className="text-xs text-muted-foreground">{candidate.categoryName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={candidate.isActive ? "ACTIVE" : "INACTIVE"} />
                 {canManageLimited && (
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(candidate)}>
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(candidate)}>
                     Edit
                   </Button>
                 )}
@@ -187,20 +195,33 @@ export function CandidatesGrid({
         </ul>
       )}
 
-      {/* Remounts the sheet (resetting its internal form state) whenever the
-          edit target changes, or, for "create", whenever the category list
-          itself changes — otherwise a sheet mounted while categories was
-          still empty would keep defaulting its Category select to nothing
-          even after the first category gets added. */}
-      <CandidateFormSheet
-        key={editing?.id ?? `create:${categories.map((c) => c.id).join(",")}`}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        eventId={eventId}
-        categories={categories}
-        initialValues={editing}
-        canEditStructural={canManageFull}
-      />
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {safePage} of {pageCount}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              <ChevronLeft className="size-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              disabled={safePage >= pageCount}
+            >
+              Next
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

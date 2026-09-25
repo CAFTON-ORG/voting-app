@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, Pencil, UserX } from "lucide-react";
+import { Pencil, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTableRowActions } from "@/components/admin/data-table-row-actions";
@@ -62,19 +62,17 @@ export function CandidateCard({
       </div>
       <CardContent className="flex flex-col gap-1 py-3">
         <p className="text-xs font-medium text-muted-foreground">#{candidate.candidateNumber}</p>
-        <p className="truncate font-medium">{candidate.fullName}</p>
+        <Link
+          href={`/admin/events/${candidate.eventId}/candidates/${candidate.id}`}
+          className="truncate font-medium hover:underline"
+        >
+          {candidate.fullName}
+        </Link>
         <p className="truncate text-xs text-muted-foreground">
           {candidate.programYear ? `${candidate.programYear} · ` : ""}
           {candidate.categoryName}
         </p>
-        <div className="mt-2 flex items-center justify-between">
-          <Link
-            href={`/admin/events/${candidate.eventId}/candidates/${candidate.id}`}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Eye className="size-3.5" />
-            View
-          </Link>
+        <div className="mt-2 flex items-center justify-end">
           <DataTableRowActions>
             <DropdownMenuItem onClick={onEdit}>
               <Pencil className="size-4" />

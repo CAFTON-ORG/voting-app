@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -9,7 +8,9 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-edit-button";
+import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 export default async function CandidateDetailPage(
   props: PageProps<"/admin/events/[id]/candidates/[candidateId]">
@@ -47,6 +48,12 @@ export default async function CandidateDetailPage(
     orderBy: { displayOrder: "asc" },
   });
 
+  const categoryTotalVotes = canSeeVotes
+    ? await prisma.ballotSelection.count({ where: { categoryId: candidate.categoryId } })
+    : 0;
+  const votePercentage =
+    categoryTotalVotes > 0 ? Math.round((candidate._count.selections / categoryTotalVotes) * 1000) / 10 : 0;
+
   return (
     <div className="flex flex-col gap-6">
       <Link
@@ -58,10 +65,10 @@ export default async function CandidateDetailPage(
       </Link>
 
       <div className="flex flex-col gap-6 sm:flex-row">
-        <div className="relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-56">
-          {candidate.photoUrl ? (
-            <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
-          ) : (
+        {candidate.photoUrl ? (
+          <CandidatePhotoLightbox photoUrl={candidate.photoUrl} fullName={candidate.fullName} />
+        ) : (
+          <div className="relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-56">
             <div className="flex size-full items-center justify-center text-4xl font-semibold text-muted-foreground">
               {candidate.fullName
                 .split(" ")
@@ -70,8 +77,8 @@ export default async function CandidateDetailPage(
                 .map((p) => p[0]?.toUpperCase())
                 .join("")}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -129,9 +136,16 @@ export default async function CandidateDetailPage(
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-muted-foreground">Voting Information</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold tabular-nums">{candidate._count.selections}</p>
-                <p className="text-xs text-muted-foreground">votes</p>
+              <CardContent className="flex flex-col gap-2">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-semibold tabular-nums">{candidate._count.selections}</p>
+                  <p className="text-xs text-muted-foreground">votes</p>
+                  <p className="ml-auto text-sm font-medium tabular-nums">{votePercentage}%</p>
+                </div>
+                <Progress value={votePercentage} />
+                <p className="text-xs text-muted-foreground">
+                  of {categoryTotalVotes} vote{categoryTotalVotes === 1 ? "" : "s"} cast in {candidate.category.name}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -142,7 +156,7 @@ export default async function CandidateDetailPage(
             </CardHeader>
             <CardContent>
               {createdByName ? (
-                <EntityMetadata createdByName={createdByName} createdAt={candidate.createdAt} />
+                <EntityMetadata createdByName={createdByName} createdAt={candidate.createdAt} withAvatar />
               ) : (
                 <p className="text-xs text-muted-foreground">Added {candidate.createdAt.toLocaleString()}</p>
               )}

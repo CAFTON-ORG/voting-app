@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
+import { GoogleLogo } from "@/components/auth/google-logo";
 
 /** hdDomain pre-fills Google's account chooser to a Workspace domain —
  * a UX hint only. The server-side domain check in eligibility.ts is the
@@ -33,7 +35,8 @@ export function GoogleSignInButton({
   }
 
   return (
-    <Button onClick={handleClick} disabled={loading} className="w-full">
+    <Button onClick={handleClick} disabled={loading} variant="outline" className="w-full">
+      {loading ? <Loader2 className="size-4 animate-spin" /> : <GoogleLogo className="size-4" />}
       {loading ? "Redirecting…" : label}
     </Button>
   );

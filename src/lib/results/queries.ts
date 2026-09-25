@@ -23,14 +23,22 @@ export async function getCandidateResults(eventId: string) {
     },
   });
 
-  return categories.map((category) => ({
-    id: category.id,
-    name: category.name,
-    candidates: category.candidates.map((candidate) => ({
-      id: candidate.id,
-      candidateNumber: candidate.candidateNumber,
-      fullName: candidate.fullName,
-      votes: candidate._count.selections,
-    })),
-  }));
+  return categories.map((category) => {
+    const total = category.candidates.reduce((sum, c) => sum + c._count.selections, 0);
+    return {
+      id: category.id,
+      name: category.name,
+      totalVotes: total,
+      candidates: category.candidates
+        .map((candidate) => ({
+          id: candidate.id,
+          candidateNumber: candidate.candidateNumber,
+          fullName: candidate.fullName,
+          photoUrl: candidate.photoUrl,
+          votes: candidate._count.selections,
+          percentage: total > 0 ? Math.round((candidate._count.selections / total) * 1000) / 10 : 0,
+        }))
+        .sort((a, b) => b.votes - a.votes),
+    };
+  });
 }

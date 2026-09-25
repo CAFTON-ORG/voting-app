@@ -43,6 +43,10 @@ export function CandidateFormSheet({
   categories,
   /** Omit for "create"; pass the candidate's current values for "edit". */
   initialValues,
+  /** "Create" only — preselects a category, e.g. right after that category
+   * was just added, so the natural next step (add its first candidate)
+   * doesn't require re-picking it from the dropdown. */
+  presetCategoryId,
   /** Structural fields (number/category) are only editable in this window
    * — see assertStructuralChangesAllowed in the server action. */
   canEditStructural,
@@ -52,10 +56,13 @@ export function CandidateFormSheet({
   eventId: string;
   categories: CategoryOption[];
   initialValues?: CandidateFormValues;
+  presetCategoryId?: string;
   canEditStructural: boolean;
 }) {
   const isEdit = Boolean(initialValues);
-  const [categoryId, setCategoryId] = useState(initialValues?.categoryId ?? categories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState(
+    initialValues?.categoryId ?? presetCategoryId ?? categories[0]?.id ?? ""
+  );
   const [candidateNumber, setCandidateNumber] = useState(String(initialValues?.candidateNumber ?? ""));
   const [fullName, setFullName] = useState(initialValues?.fullName ?? "");
   const [programYear, setProgramYear] = useState(initialValues?.programYear ?? "");

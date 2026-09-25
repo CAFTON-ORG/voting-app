@@ -52,16 +52,19 @@ export function DateTimePicker({
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
-            className={cn("flex-1 justify-start text-left font-normal", !value && "text-muted-foreground")}
+            className={cn(
+              "min-w-0 flex-1 basis-40 justify-start overflow-hidden text-left font-normal",
+              !value && "text-muted-foreground"
+            )}
           >
-            <CalendarIcon className="size-4" />
-            {value ? value.toLocaleDateString() : placeholder}
+            <CalendarIcon className="size-4 shrink-0" />
+            <span className="truncate">{value ? value.toLocaleDateString() : placeholder}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">

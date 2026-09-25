@@ -38,11 +38,17 @@ export function CategoryManager({
   categories,
   canManageFull,
   canManageLimited,
+  onCreated,
 }: {
   eventId: string;
   categories: CategoryRow[];
   canManageFull: boolean;
   canManageLimited: boolean;
+  /** Called with the new category's id right after a successful create
+   * (not edit) — lets the workspace guide the admin straight into adding
+   * that category's first candidate instead of leaving them to find the
+   * Candidates tab themselves. */
+  onCreated?: (categoryId: string) => void;
 }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,6 +82,9 @@ export function CategoryManager({
       if (result.ok) {
         toast.success(editing ? "Category updated" : "Category added");
         setDialogOpen(false);
+        if (!editing && result.data && "id" in result.data) {
+          onCreated?.(result.data.id);
+        }
         router.refresh();
       } else {
         setError(result.message);

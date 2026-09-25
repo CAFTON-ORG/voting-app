@@ -37,7 +37,7 @@ export function ScheduleEventForm({ eventId }: { eventId: string }) {
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <p className="text-sm font-medium">Set schedule to move this event to SCHEDULED</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label>Opens</Label>
               <DateTimePicker value={opensAt} onChange={setOpensAt} />

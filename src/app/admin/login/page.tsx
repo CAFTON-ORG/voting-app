@@ -1,4 +1,5 @@
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 /** Admin login is deliberately a separate entry point from voter login —
  * no domain restriction here (Cafton/SIT staff won't have UB emails);
@@ -7,12 +8,13 @@ import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
  * reaching this page. */
 export default function AdminLoginPage() {
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-      <h1 className="text-xl font-semibold">Admin sign in</h1>
-      <p className="text-sm text-muted-foreground">
-        For authorized Cafton and event administrators only.
-      </p>
+    <AuthPageShell
+      eyebrow="Cafton"
+      title="Admin sign in"
+      description="For authorized Cafton and event administrators only."
+      footer="Voting Technology Partner — CAFTON"
+    >
       <GoogleSignInButton redirectTo="/admin" label="Continue with Google" />
-    </div>
+    </AuthPageShell>
   );
 }
