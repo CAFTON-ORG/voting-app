@@ -7,8 +7,16 @@ import { castBallotSchema, type CastBallotInput } from "@/lib/validation/voting"
 import { pgErrorCode, ERROR_MESSAGES } from "./errors";
 
 export type CastBallotResult =
-  | { ok: true; submittedAt: string; eventName: string }
+  | { ok: true; submittedAt: string; eventName: string; reference: string }
   | { ok: false; message: string };
+
+/** A receipt-style code derived from the ballot's own id — never from
+ * anything voter- or selection-related, since Ballot carries neither (see
+ * docs/security-boundaries.md). Safe to show and safe to lose; it's not
+ * looked up anywhere, just a "something was recorded" reassurance. */
+function toReference(ballotId: string): string {
+  return `CAFTON-${ballotId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+}
 
 /** The only place cast_ballot() is ever invoked. Implements the boundary
  * documented in docs/security-boundaries.md: trusted identity is
@@ -38,7 +46,7 @@ export async function castBallotAction(input: CastBallotInput): Promise<CastBall
   }
 
   try {
-    const rows = await prisma.$queryRaw<{ submitted_at: Date; event_name: string }[]>`
+    const rows = await prisma.$queryRaw<{ ballot_id: string; submitted_at: Date; event_name: string }[]>`
       select * from cast_ballot(
         ${event.id}::uuid,
         ${identity.authUserId}::uuid,
@@ -48,7 +56,12 @@ export async function castBallotAction(input: CastBallotInput): Promise<CastBall
       )
     `;
     const row = rows[0];
-    return { ok: true, submittedAt: row.submitted_at.toISOString(), eventName: row.event_name };
+    return {
+      ok: true,
+      submittedAt: row.submitted_at.toISOString(),
+      eventName: row.event_name,
+      reference: toReference(row.ballot_id),
+    };
   } catch (err) {
     const code = pgErrorCode(err);
     return { ok: false, message: ERROR_MESSAGES[code ?? ""] ?? "Your vote could not be submitted. Please try again." };

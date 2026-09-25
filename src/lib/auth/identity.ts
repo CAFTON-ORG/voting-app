@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-export type TrustedIdentity = { authUserId: string; email: string };
+export type TrustedIdentity = { authUserId: string; email: string; fullName: string | null };
 
 /** The one place the app establishes "who is making this request." Uses
  * getClaims() (cryptographically verifies the JWT, refreshing it if
@@ -18,5 +18,10 @@ export const getTrustedIdentity = cache(async (): Promise<TrustedIdentity | null
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims?.sub || !data.claims.email) return null;
-  return { authUserId: data.claims.sub, email: data.claims.email };
+  const claims = data.claims as { sub: string; email: string; user_metadata?: { full_name?: string } };
+  return {
+    authUserId: claims.sub,
+    email: claims.email,
+    fullName: claims.user_metadata?.full_name ?? null,
+  };
 });

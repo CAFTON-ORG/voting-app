@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount } from "@/lib/results/queries";
-import { Button } from "@/components/ui/button";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
+import { EventHero } from "@/components/voting/event-hero";
 import { CandidatePreviewGrid } from "@/components/voting/candidate-preview-grid";
 
 /** Public event page. Deliberately shows only a total ballot count (and
@@ -41,32 +40,16 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   return (
     <div className="flex min-h-svh flex-col">
       <PublicHeader />
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 py-16">
-        <div className="mx-auto max-w-sm text-center">
-          <p className="text-sm font-medium text-muted-foreground">University of Baguio</p>
-          <h1 className="mt-2 text-2xl font-semibold text-balance">{event.name}</h1>
-
-          {ballotCount !== null && (
-            <p className="mt-6 text-sm text-muted-foreground">
-              {ballotCount.toLocaleString()} votes submitted
-            </p>
-          )}
-
-          {event.state === "OPEN" && (
-            <Button asChild className="mt-8 w-full">
-              <Link href={`/events/${slug}/vote`}>Vote Now</Link>
-            </Button>
-          )}
-          {event.state === "SCHEDULED" && (
-            <p className="mt-8 text-sm text-muted-foreground">Voting has not opened yet.</p>
-          )}
-          {(event.state === "CLOSED" || event.state === "FINALIZED") && (
-            <p className="mt-8 text-sm text-muted-foreground">Voting has closed.</p>
-          )}
-          {event.state === "PAUSED" && (
-            <p className="mt-8 text-sm text-muted-foreground">Voting is temporarily paused.</p>
-          )}
-        </div>
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 pb-16">
+        <EventHero
+          name={event.name}
+          organizer="University of Baguio"
+          state={event.state}
+          votingOpensAt={event.votingOpensAt}
+          votingClosesAt={event.votingClosesAt}
+          slug={slug}
+          ballotCount={ballotCount}
+        />
 
         {candidates.length > 0 && (
           <div>
