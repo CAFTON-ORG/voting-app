@@ -247,16 +247,7 @@ export function BallotForm({
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
-            <button
-              type="button"
-              onClick={() => setStep("select")}
-              disabled={pending}
-              className="mt-8 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="size-4" />
-              Back to Candidates
-            </button>
-            <h1 className="font-heading mt-4 text-xl font-semibold">Review your vote</h1>
+            <h1 className="font-heading mt-8 text-xl font-semibold">Review your vote</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Please review your selections carefully. Once submitted, your ballot cannot be changed.
             </p>
@@ -304,8 +295,12 @@ export function BallotForm({
         <PublicFooter />
 
         <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
-          <div className="mx-auto flex w-full max-w-md">
-            <Button onClick={() => setConfirmOpen(true)} disabled={pending} className="w-full">
+          <div className="mx-auto flex w-full max-w-md gap-2">
+            <Button variant="outline" onClick={() => setStep("select")} disabled={pending}>
+              <ChevronLeft className="size-4" />
+              Back
+            </Button>
+            <Button onClick={() => setConfirmOpen(true)} disabled={pending} className="flex-1">
               Submit My Vote
             </Button>
           </div>
