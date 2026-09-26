@@ -21,6 +21,16 @@ function isValidDate(d: Date | undefined): d is Date {
   return d instanceof Date && !Number.isNaN(d.getTime());
 }
 
+function startOfDay(d: Date): Date {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 // 15-minute increments is the standard step for this kind of scheduling
 // picker (matches Google Calendar/most booking UIs) - fine-grained enough
 // for a voting window's open/close time, without a 96-option list turning
@@ -32,7 +42,7 @@ const TIME_OPTIONS = Array.from({ length: (24 * 60) / TIME_STEP_MINUTES }, (_, i
   const minutes = totalMinutes % 60;
   const period = hours < 12 ? "AM" : "PM";
   const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-  return { value: `${pad(hours)}:${pad(minutes)}`, label: `${displayHour}:${pad(minutes)} ${period}` };
+  return { value: `${pad(hours)}:${pad(minutes)}`, label: `${displayHour}:${pad(minutes)} ${period}`, totalMinutes };
 });
 
 /** Calendar picks the date; a searchable time combobox (15-minute steps)
@@ -88,6 +98,15 @@ export function DateTimePicker({
   const currentTimeValue = validValue ? `${pad(validValue.getHours())}:${pad(validValue.getMinutes())}` : null;
   const currentTimeLabel = TIME_OPTIONS.find((t) => t.value === currentTimeValue)?.label;
 
+  // Scheduling something to start in the past isn't a valid state for this
+  // app (voting can't have "opened" yesterday) - the standard pattern for
+  // this kind of picker is to disable past days on the calendar outright,
+  // and for today specifically, disable the time slots that have already
+  // passed rather than leaving them pickable and only failing at submit.
+  const now = new Date();
+  const isTodaySelected = validValue ? isSameCalendarDay(validValue, now) : false;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
   return (
     <div className="flex flex-wrap gap-2">
       <Popover open={dateOpen} onOpenChange={setDateOpen}>
@@ -109,6 +128,7 @@ export function DateTimePicker({
           <Calendar
             mode="single"
             selected={validValue}
+            disabled={(date) => date < startOfDay(now)}
             onSelect={(date) => {
               handleDateSelect(date);
               setDateOpen(false);
@@ -143,6 +163,7 @@ export function DateTimePicker({
                   <CommandItem
                     key={t.value}
                     value={t.label}
+                    disabled={isTodaySelected && t.totalMinutes < nowMinutes}
                     data-checked={t.value === currentTimeValue}
                     onSelect={() => {
                       handleTimeChange(t.value);
