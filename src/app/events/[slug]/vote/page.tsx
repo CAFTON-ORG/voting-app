@@ -48,6 +48,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
     return (
       <VotingUnavailableState
         icon={Clock}
+        tone="info"
         title="Voting hasn't opened yet."
         description={
           event.votingOpensAt
@@ -68,6 +69,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
     return (
       <VotingUnavailableState
         icon={PauseCircle}
+        tone="warning"
         title="Voting is temporarily paused."
         description="Please check back shortly."
         footer={signedInFooter}
@@ -101,6 +103,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
     return (
       <VotingUnavailableState
         icon={CircleCheck}
+        tone="success"
         title="Vote already submitted"
         description="Your vote for this event has already been recorded. Thank you for participating."
         footer={signedInFooter}
