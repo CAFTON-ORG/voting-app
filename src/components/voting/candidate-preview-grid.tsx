@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CandidateAvatar } from "@/components/voting/candidate-avatar";
 
 type PreviewCandidate = {
@@ -15,6 +17,8 @@ type PreviewCandidate = {
 
 const INITIAL_COUNT = 8;
 const LOAD_MORE_COUNT = 8;
+// Below this, a search box is more clutter than help for a handful of names.
+const SEARCH_THRESHOLD = 9;
 
 /** A read-only "meet the candidates" preview for the public event page —
  * separate from the admin CandidateCard (no edit actions, no admin data)
@@ -24,26 +28,52 @@ const LOAD_MORE_COUNT = 8;
  * these events run at. */
 export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandidate[] }) {
   const [visible, setVisible] = useState(INITIAL_COUNT);
-  const shown = candidates.slice(0, visible);
+  const [search, setSearch] = useState("");
+
+  const filtered =
+    search.trim().length === 0
+      ? candidates
+      : candidates.filter((c) => c.fullName.toLowerCase().includes(search.trim().toLowerCase()));
+  const shown = filtered.slice(0, visible);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {shown.map((candidate) => (
-          <div key={candidate.id} className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center">
-            <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-16" />
-            <div>
-              <p className="text-xs text-muted-foreground">#{candidate.candidateNumber}</p>
-              <p className="font-medium">{candidate.fullName}</p>
-              <p className="text-xs text-muted-foreground">{candidate.categoryName}</p>
+      {candidates.length > SEARCH_THRESHOLD && (
+        <div className="relative mx-auto w-full max-w-xs">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setVisible(INITIAL_COUNT);
+            }}
+            placeholder="Search candidates…"
+            className="pl-8"
+          />
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <p className="text-center text-sm text-muted-foreground">No candidates match &quot;{search}&quot;.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {shown.map((candidate) => (
+            <div key={candidate.id} className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center">
+              <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-16" />
+              <div>
+                <p className="text-xs text-muted-foreground">#{candidate.candidateNumber}</p>
+                <p className="font-medium">{candidate.fullName}</p>
+                <p className="text-xs text-muted-foreground">{candidate.categoryName}</p>
+              </div>
+              {candidate.tagline && (
+                <p className="text-xs italic text-muted-foreground">&quot;{candidate.tagline}&quot;</p>
+              )}
             </div>
-            {candidate.tagline && (
-              <p className="text-xs italic text-muted-foreground">&quot;{candidate.tagline}&quot;</p>
-            )}
-          </div>
-        ))}
-      </div>
-      {visible < candidates.length && (
+          ))}
+        </div>
+      )}
+
+      {visible < filtered.length && (
         <Button variant="outline" className="self-center" onClick={() => setVisible((v) => v + LOAD_MORE_COUNT)}>
           Show more
         </Button>

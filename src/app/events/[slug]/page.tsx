@@ -51,14 +51,22 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
           ballotCount={ballotCount}
         />
 
-        {candidates.length > 0 && (
-          <div>
-            <h2 className="text-center text-lg font-semibold">Meet the Candidates</h2>
-            <div className="mt-6">
+        <div>
+          <h2 className="text-center text-lg font-semibold">Meet the Candidates</h2>
+          <div className="mt-6">
+            {event.categories.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Voting categories haven&apos;t been configured yet.
+              </p>
+            ) : candidates.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Candidates haven&apos;t been announced yet.
+              </p>
+            ) : (
               <CandidatePreviewGrid candidates={candidates} />
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </main>
       <PublicFooter />
     </div>

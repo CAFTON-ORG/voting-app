@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
+import { Check, CheckCircle2 } from "lucide-react";
 import { castBallotAction } from "@/actions/voting/cast-ballot";
-import { RadioGroup } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Stepper } from "./stepper";
 import { VotingProgress } from "./voting-progress";
-import { BallotCandidateCard } from "./ballot-candidate-card";
+import { BallotCategorySection } from "./ballot-category-section";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
 import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { PublicHeader } from "@/components/voting/public-header";
@@ -247,35 +246,33 @@ export function BallotForm({
           <VotingProgress total={event.categories.length} completed={completedCount} />
         </div>
 
+        {event.categories.length > 1 && (
+          <nav aria-label="Jump to category" className="mt-4 flex flex-wrap gap-2">
+            {event.categories.map((category) => (
+              <a
+                key={category.id}
+                href={`#category-${category.id}`}
+                className="rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted"
+              >
+                {selections[category.id] && <Check className="mr-1 inline size-3 text-primary" />}
+                {category.name}
+              </a>
+            ))}
+          </nav>
+        )}
+
         <div className="mt-8 flex flex-col gap-10">
           {event.categories.map((category) => (
-            <div key={category.id} id={`category-${category.id}`}>
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-base font-semibold tracking-wide uppercase">{category.name}</h2>
-                <p className="text-xs text-muted-foreground">{category.candidates.length} candidates</p>
-              </div>
-              {category.description && (
-                <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>
-              )}
-              <p className="mt-1 text-xs font-medium text-muted-foreground">Select exactly 1 candidate</p>
-
-              <RadioGroup
-                className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3"
-                value={selections[category.id] ?? ""}
-                onValueChange={(value) =>
-                  setSelections((current) => ({ ...current, [category.id]: value }))
-                }
-              >
-                {category.candidates.map((candidate) => (
-                  <BallotCandidateCard
-                    key={candidate.id}
-                    candidate={toProfile(candidate, category.name)}
-                    selected={selections[category.id] === candidate.id}
-                    onViewProfile={() => setProfileCandidate(toProfile(candidate, category.name))}
-                  />
-                ))}
-              </RadioGroup>
-            </div>
+            <BallotCategorySection
+              key={category.id}
+              category={category}
+              selectedCandidateId={selections[category.id]}
+              onSelect={(candidateId) =>
+                setSelections((current) => ({ ...current, [category.id]: candidateId }))
+              }
+              onViewProfile={setProfileCandidate}
+              toProfile={toProfile}
+            />
           ))}
         </div>
       </main>
