@@ -24,6 +24,11 @@ export function CandidatesGrid({
   canManageLimited,
   onAdd,
   onEdit,
+  /** Seeds the category filter — used to jump straight to one category's
+   * candidates from its card in the Categories tab, e.g. right after it's
+   * created. Pass a changing `key` from the caller (see EventWorkspaceTabs)
+   * so a second jump re-applies even if the admin had since cleared it. */
+  initialCategoryFilter,
 }: {
   eventId: string;
   categories: CategoryOption[];
@@ -32,9 +37,10 @@ export function CandidatesGrid({
   canManageLimited: boolean;
   onAdd: () => void;
   onEdit: (candidate: CandidateCardData) => void;
+  initialCategoryFilter?: string;
 }) {
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? "all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);

@@ -60,6 +60,7 @@ export function EventWorkspaceTabs({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<CandidateFormValues | undefined>();
   const [presetCategoryId, setPresetCategoryId] = useState<string | undefined>();
+  const [categoryJump, setCategoryJump] = useState<{ categoryName: string; token: number } | undefined>();
 
   const categoryOptions: CategoryOption[] = categories.map((c) => ({ id: c.id, name: c.name }));
 
@@ -111,15 +112,18 @@ export function EventWorkspaceTabs({
           categories={categories}
           canManageFull={canManageFull}
           canManageLimited={canManageLimited}
-          onCreated={(categoryId) => {
+          onViewCandidates={(categoryId) => {
+            const category = categories.find((c) => c.id === categoryId);
+            if (!category) return;
+            setCategoryJump((prev) => ({ categoryName: category.name, token: (prev?.token ?? 0) + 1 }));
             setTab("candidates");
-            openCreate(categoryId);
           }}
         />
       </TabsContent>
 
       <TabsContent value="candidates" className="mt-4">
         <CandidatesGrid
+          key={categoryJump?.token}
           eventId={eventId}
           categories={categoryOptions}
           candidates={candidates}
@@ -127,6 +131,7 @@ export function EventWorkspaceTabs({
           canManageLimited={canManageLimited}
           onAdd={() => openCreate()}
           onEdit={openEdit}
+          initialCategoryFilter={categoryJump?.categoryName}
         />
       </TabsContent>
 

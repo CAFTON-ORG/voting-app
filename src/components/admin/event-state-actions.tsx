@@ -16,6 +16,7 @@ import {
 import type { EventState, AdminRole } from "@prisma/client";
 import { roleCan } from "@/lib/auth/permissions";
 import type { ActionResult } from "@/lib/actions/result";
+import { reopenVotingSchema } from "@/lib/validation/admin";
 
 /** Buttons are shown based on the viewer's permissions purely for UX —
  * every action re-checks the same permission server-side via
@@ -36,7 +37,18 @@ export function EventStateActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [reopenOpen, setReopenOpen] = useState(false);
+
+  function handleReasonChange(value: string) {
+    setReason(value);
+    // Clears itself the moment the field becomes valid again, rather than
+    // waiting for the next submit attempt.
+    if (reasonError) {
+      const result = reopenVotingSchema.shape.reason.safeParse(value);
+      if (result.success) setReasonError(null);
+    }
+  }
 
   function run(action: () => Promise<ActionResult>) {
     setError(null);
@@ -107,7 +119,10 @@ export function EventStateActions({
 
       <ConfirmDialog
         open={reopenOpen}
-        onOpenChange={setReopenOpen}
+        onOpenChange={(next) => {
+          setReopenOpen(next);
+          if (next) setReasonError(null);
+        }}
         title="Reopen voting?"
         variant="destructive"
         confirmLabel="Reopen Voting"
@@ -120,13 +135,20 @@ export function EventStateActions({
             <Textarea
               id="reopen-reason"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => handleReasonChange(e.target.value)}
+              aria-invalid={!!reasonError}
               placeholder="Why is this event being reopened?"
             />
+            {reasonError && <p className="text-xs text-destructive">{reasonError}</p>}
           </div>
         }
         onConfirm={async () => {
-          const result = await reopenVotingAction(eventId, reason);
+          const parsed = reopenVotingSchema.shape.reason.safeParse(reason);
+          if (!parsed.success) {
+            setReasonError(parsed.error.issues[0]?.message ?? "A reason is required");
+            throw new Error(parsed.error.issues[0]?.message ?? "A reason is required");
+          }
+          const result = await reopenVotingAction(eventId, parsed.data);
           if (!result.ok) throw new Error(result.message);
           setReason("");
         }}

@@ -9,6 +9,7 @@ import {
   scheduleEventSchema,
   rescheduleEventSchema,
 } from "@/lib/validation/events";
+import { slugify } from "@/lib/format/slugify";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
 export async function createEventAction(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -17,9 +18,15 @@ export async function createEventAction(input: unknown): Promise<ActionResult<{ 
     const data = createEventSchema.parse(input);
 
     const event = await prisma.$transaction(async (tx) => {
+      const base = slugify(data.name) || "event";
+      let slug = base;
+      for (let suffix = 2; await tx.event.findUnique({ where: { slug }, select: { id: true } }); suffix++) {
+        slug = `${base}-${suffix}`;
+      }
+
       const created = await tx.event.create({
         data: {
-          slug: data.slug,
+          slug,
           name: data.name,
           allowedDomains: data.allowedDomains,
           eligibilityMode: "DOMAIN_ONLY",

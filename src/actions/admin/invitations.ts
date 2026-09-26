@@ -5,12 +5,8 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getTrustedIdentity } from "@/lib/auth/identity";
+import { inviteAdminSchema } from "@/lib/validation/admin";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
-
-const inviteSchema = z.object({
-  email: z.email(),
-  role: z.enum(["ADMIN", "MODERATOR", "AUDITOR"]),
-});
 
 /** True if `adminUserId` is the only active ADMIN — used to block actions
  * that would leave the system with no one able to manage it at all. */
@@ -30,7 +26,7 @@ async function isLastActiveAdmin(tx: Prisma.TransactionClient, adminUserId: stri
 export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
-    const data = inviteSchema.parse(input);
+    const data = inviteAdminSchema.parse(input);
     const email = data.email.trim().toLowerCase();
 
     await prisma.$transaction(async (tx) => {
