@@ -21,7 +21,7 @@ import {
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
-import { CandidateAvatarStack } from "@/components/admin/candidate-avatar-stack";
+import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
 import {
   createCategoryAction,
   updateCategoryAction,

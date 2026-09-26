@@ -8,6 +8,7 @@ import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { LogoScene } from "@/components/shared/logo-scene";
 import { Reveal } from "@/components/shared/reveal";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
 import { CAFTON_WEBSITE_URL } from "@/lib/site";
 
 // Lists live events — without this, Next prerenders the query result at
@@ -17,7 +18,17 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [events, identity] = await Promise.all([
-    prisma.event.findMany({ where: { state: "OPEN" }, orderBy: { createdAt: "desc" } }),
+    prisma.event.findMany({
+      where: { state: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        candidates: {
+          where: { isActive: true },
+          orderBy: { displayOrder: "asc" },
+          select: { id: true, fullName: true, photoUrl: true },
+        },
+      },
+    }),
     getTrustedIdentity(),
   ]);
 
@@ -92,8 +103,9 @@ export default async function Home() {
                   >
                     <div className="min-w-0">
                       <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
                         <VotingStatusBadge state={event.state} />
+                        <CandidateAvatarStack candidates={event.candidates} />
                       </div>
                     </div>
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
