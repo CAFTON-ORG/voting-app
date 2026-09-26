@@ -31,7 +31,6 @@ import { Stepper } from "./stepper";
 import { VotingProgress } from "./voting-progress";
 import { BallotCategorySection } from "./ballot-category-section";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
-import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
@@ -150,7 +149,6 @@ export function BallotForm({
             <Button size="lg" className="w-full" onClick={() => setStep("select")}>
               Start Voting
             </Button>
-            <SignedInBar email={signedInEmail} redirectTo={`/events/${event.slug}/vote`} />
             <p className="text-center text-xs text-muted-foreground">
               By continuing, you agree to how this election handles your data — see the{" "}
               <button
