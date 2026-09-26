@@ -44,12 +44,21 @@ export function CandidatePhotoUpload({
     const formData = new FormData();
     formData.set("photo", file);
     startTransition(async () => {
-      const result = await uploadCandidatePhotoAction(candidateId, formData);
-      if (result.ok) {
-        toast.success("Photo updated");
-        router.refresh();
-      } else {
-        setError(result.message);
+      try {
+        const result = await uploadCandidatePhotoAction(candidateId, formData);
+        if (result.ok) {
+          toast.success("Photo updated");
+          router.refresh();
+        } else {
+          setError(result.message);
+        }
+      } catch {
+        // uploadCandidatePhotoAction always returns ok/fail itself and never
+        // throws - a rejection here means the request never reached it at
+        // all (e.g. exceeding next.config.ts's serverActions.bodySizeLimit),
+        // which would otherwise surface as an uncaught error crashing to
+        // Next's generic error page instead of this inline message.
+        setError("Could not upload the photo. Please try a smaller image.");
       }
       if (inputRef.current) inputRef.current.value = "";
     });

@@ -1,6 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // Next's default Server Action body limit is 1MB - well under
+      // validateCandidatePhoto's own 5MB cap (src/lib/storage/candidate-photo.ts),
+      // so a 1-5MB photo passed the client-side size check but still got
+      // rejected by the framework itself before ever reaching that
+      // validation or its friendly error message, surfacing as an
+      // uncaught error instead. A little headroom over 5MB accounts for
+      // FormData/multipart overhead on top of the raw file bytes.
+      bodySizeLimit: "6mb",
+    },
+  },
   images: {
     // Candidate photos are served from this project's Supabase Storage
     // public bucket (see src/lib/storage/candidate-photo.ts) — restricted
