@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Logo } from "@/components/shared/logo";
 import { PartnerLogos } from "@/components/shared/partner-logos";
@@ -16,16 +18,30 @@ export function AuthPageShell({
   description,
   children,
   footer,
+  backHref = "/",
+  backLabel = "Back",
 }: {
   eyebrow?: string;
   title: string;
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  /** Where the top-left back link goes — defaults to the public home page.
+   * Pass a more specific page (e.g. an event's own landing page) when one
+   * makes more sense for that particular sign-in-adjacent screen. */
+  backHref?: string;
+  backLabel?: string;
 }) {
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted/30 px-6 py-12">
       <AuroraGlow />
+      <Link
+        href={backHref}
+        className="absolute top-6 left-6 flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="size-4" />
+        {backLabel}
+      </Link>
       <Card className="w-full max-w-sm rounded-2xl border-border/60 shadow-lg shadow-black/3 dark:shadow-black/20">
         <CardHeader className="flex flex-col items-center gap-3 text-center">
           <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">

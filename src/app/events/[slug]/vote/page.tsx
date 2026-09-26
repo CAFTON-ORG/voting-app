@@ -21,7 +21,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
   const identity = await getTrustedIdentity();
   if (!identity) {
     return (
-      <AuthPageShell title={event.name} description="Sign in with your University of Baguio account to vote.">
+      <AuthPageShell title={event.name} description="Sign in with your University of Baguio account to vote." backHref={`/events/${slug}`}>
         <GoogleSignInButton redirectTo={`/events/${slug}/vote`} />
       </AuthPageShell>
     );
@@ -32,7 +32,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
 
   if (!isAllowedVoterEmail(identity.email, event.allowedDomains)) {
     return (
-      <AuthPageShell title={event.name} footer={signedInFooter}>
+      <AuthPageShell title={event.name} footer={signedInFooter} backHref={`/events/${slug}`}>
         <Alert variant="destructive">
           <AlertTitle>Not eligible</AlertTitle>
           <AlertDescription>
