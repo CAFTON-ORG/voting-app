@@ -217,7 +217,15 @@ model AdminInvitation {
 
   invitedBy AdminUser @relation("InvitedBy", fields: [invitedById], references: [id])
 
-  @@unique([email, status])
+  // No @@unique([email, status]) here — that was the actual bug: it blocks
+  // more than one row per email at *any* single status ever, not just
+  // PENDING, so an email that had already reached ACCEPTED once could
+  // never accept a second invitation later (e.g. re-inviting a removed
+  // admin) without a P2002 unique-constraint failure. The real invariant —
+  // at most one *active* (PENDING) invitation per email at a time — is
+  // instead a partial unique index (WHERE status = 'PENDING'), which
+  // Prisma's schema DSL can't express; see the
+  // admin_invitations_pending_email_key migration.
   @@map("admin_invitations")
 }
 
