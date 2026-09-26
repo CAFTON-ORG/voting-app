@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const events = await prisma.event.findMany({
-    where: { state: { not: "DRAFT" } },
+    where: { state: "OPEN" },
     orderBy: { createdAt: "desc" },
   });
 
