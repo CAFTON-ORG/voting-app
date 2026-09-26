@@ -215,7 +215,19 @@ export function CandidateFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, () => {
+              // With course/year now required, a submit blocked purely by
+              // client-side validation (as opposed to a server rejection,
+              // which already shows via the root-error banner below) had
+              // no top-level feedback at all - just small text under
+              // whichever fields were empty, easy to miss in a sidebar
+              // form. This makes "why isn't this submitting" impossible to
+              // mistake for the button being broken.
+              toast.error("Please fill in the highlighted fields before continuing.");
+            })}
+            className="flex h-full flex-col"
+          >
             <SheetHeader>
               <SheetTitle>{isEdit ? "Edit candidate" : "Add candidate"}</SheetTitle>
               <SheetDescription>
