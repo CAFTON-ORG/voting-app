@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-edit-button";
+import { CandidateLifecycleActions } from "@/components/admin/candidate-lifecycle-actions";
 import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getPercentageColor } from "@/lib/format/progress-color";
@@ -98,41 +99,57 @@ export default async function CandidateDetailPage(
                 <span className="text-sm text-muted-foreground">{candidate.category.name}</span>
               </div>
             </div>
-            {canManageLimited && (
-              <CandidateDetailEditButton
+            <div className="flex items-center gap-1">
+              {canManageLimited && (
+                <CandidateDetailEditButton
+                  eventId={id}
+                  categories={categories}
+                  canEditStructural={canManageFull}
+                  initialValues={{
+                    id: candidate.id,
+                    categoryId: candidate.categoryId,
+                    candidateNumber: candidate.candidateNumber,
+                    fullName: candidate.fullName,
+                    programYear: candidate.programYear ?? "",
+                    photoUrl: candidate.photoUrl,
+                  }}
+                />
+              )}
+              <CandidateLifecycleActions
+                candidateId={candidate.id}
+                fullName={candidate.fullName}
+                isActive={candidate.isActive}
                 eventId={id}
-                categories={categories}
-                canEditStructural={canManageFull}
-                initialValues={{
-                  id: candidate.id,
-                  categoryId: candidate.categoryId,
-                  candidateNumber: candidate.candidateNumber,
-                  fullName: candidate.fullName,
-                  programYear: candidate.programYear ?? "",
-                  photoUrl: candidate.photoUrl,
-                }}
+                canManageLimited={canManageLimited}
+                canManageFull={canManageFull}
               />
-            )}
+            </div>
           </div>
-
-          {candidate.tagline && <p className="text-sm italic text-muted-foreground">&quot;{candidate.tagline}&quot;</p>}
 
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">Candidate Information</CardTitle>
             </CardHeader>
+            {/* Only the fields the candidate form actually collects -
+                tagline/biography were removed from create/edit earlier and
+                showing them here (always empty for anything added since)
+                just read as broken fields, not real candidate data. */}
             <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">Full name</p>
                 <p>{candidate.fullName}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Program/Year</p>
-                <p>{candidate.programYear ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Candidate number</p>
+                <p>#{candidate.candidateNumber}</p>
               </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-muted-foreground">Biography</p>
-                <p className="whitespace-pre-wrap">{candidate.bio || "No biography provided."}</p>
+              <div>
+                <p className="text-xs text-muted-foreground">Category</p>
+                <p>{candidate.category.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Course / Year level</p>
+                <p>{candidate.programYear ?? "—"}</p>
               </div>
             </CardContent>
           </Card>

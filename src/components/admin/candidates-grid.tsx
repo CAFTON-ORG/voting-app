@@ -199,7 +199,12 @@ export function CandidatesGrid({
         >
           {filtered.map((candidate) => (
             <div key={candidate.id} className="w-44 shrink-0 sm:w-48">
-              <CandidateCard candidate={candidate} canManageFull={canManageFull} onEdit={() => onEdit(candidate)} />
+              <CandidateCard
+                candidate={candidate}
+                canManageFull={canManageFull}
+                canManageLimited={canManageLimited}
+                onEdit={() => onEdit(candidate)}
+              />
             </div>
           ))}
         </div>

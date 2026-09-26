@@ -237,13 +237,26 @@ export async function updateCandidateStructuralAction(input: unknown): Promise<A
   }
 }
 
+/** Deactivate/activate are deliberately NOT structural changes gated by
+ * assertStructuralChangesAllowed - that's the whole point of having them
+ * as a separate action from delete. A hard delete cascades onto
+ * BallotSelection, so it's only ever safe pre-OPEN (see
+ * assertStructuralChangesAllowed above); deactivating just flips
+ * is_active, which cast_ballot() already checks before accepting a new
+ * selection for that candidate, without touching any ballot already cast
+ * for them. That makes this the actual tool for disqualifying a candidate
+ * *during* an OPEN/PAUSED/CLOSED event (e.g. found ineligible, withdrew)
+ * without destroying real votes - available anytime except FINALIZED,
+ * same window as other non-structural candidate edits. */
 export async function deactivateCandidateAction(candidateId: string): Promise<ActionResult> {
   try {
-    const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
+    const admin = await requirePermission("MANAGE_CANDIDATES_LIMITED");
     await prisma.$transaction(async (tx) => {
       const candidate = await tx.candidate.findUniqueOrThrow({ where: { id: candidateId } });
       const event = await tx.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
-      assertStructuralChangesAllowed(event.state);
+      if (event.state === "FINALIZED") {
+        throw new Error("This event's results have been finalized and its candidates are frozen.");
+      }
 
       await tx.candidate.update({ where: { id: candidateId }, data: { isActive: false } });
       await tx.auditLog.create({
@@ -259,6 +272,68 @@ export async function deactivateCandidateAction(candidateId: string): Promise<Ac
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not deactivate the candidate."));
+  }
+}
+
+/** The reverse of deactivateCandidateAction - e.g. a candidate was
+ * deactivated by mistake, or a withdrawal was retracted. Same
+ * permission/window as deactivate. */
+export async function activateCandidateAction(candidateId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_CANDIDATES_LIMITED");
+    await prisma.$transaction(async (tx) => {
+      const candidate = await tx.candidate.findUniqueOrThrow({ where: { id: candidateId } });
+      const event = await tx.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
+      if (event.state === "FINALIZED") {
+        throw new Error("This event's results have been finalized and its candidates are frozen.");
+      }
+
+      await tx.candidate.update({ where: { id: candidateId }, data: { isActive: true } });
+      await tx.auditLog.create({
+        data: {
+          eventId: candidate.eventId,
+          actorAdminId: admin.adminUserId,
+          action: "CANDIDATE_ACTIVATED",
+          metadata: { fullName: candidate.fullName },
+        },
+      });
+      revalidatePath(`/admin/events/${candidate.eventId}`);
+    });
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not reactivate the candidate."));
+  }
+}
+
+/** A genuine hard delete - structural, so only ever safe pre-OPEN (see
+ * assertStructuralChangesAllowed): the actual fix for "I added the wrong
+ * candidate," as opposed to deactivate, which is for disqualifying one
+ * after voting could already have started. Deleting never renumbers any
+ * other candidate in the category - the next one created still gets
+ * MAX(candidateNumber)+1, so a gap where the deleted number was stays a
+ * gap rather than silently shifting everyone else's number down. */
+export async function deleteCandidateAction(candidateId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
+    await prisma.$transaction(async (tx) => {
+      const candidate = await tx.candidate.findUniqueOrThrow({ where: { id: candidateId } });
+      const event = await tx.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
+      assertStructuralChangesAllowed(event.state);
+
+      await tx.candidate.delete({ where: { id: candidateId } });
+      await tx.auditLog.create({
+        data: {
+          eventId: candidate.eventId,
+          actorAdminId: admin.adminUserId,
+          action: "CANDIDATE_DELETED",
+          metadata: { fullName: candidate.fullName, candidateNumber: candidate.candidateNumber },
+        },
+      });
+      revalidatePath(`/admin/events/${candidate.eventId}`);
+    });
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not delete the candidate."));
   }
 }
 

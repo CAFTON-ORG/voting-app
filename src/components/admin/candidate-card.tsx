@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, UserX } from "lucide-react";
+import { Pencil, UserX, UserCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTableRowActions } from "@/components/admin/data-table-row-actions";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { CandidatePhoto } from "@/components/shared/candidate-photo";
-import { deactivateCandidateAction } from "@/actions/candidates/mutations";
+import {
+  deactivateCandidateAction,
+  activateCandidateAction,
+  deleteCandidateAction,
+} from "@/actions/candidates/mutations";
 
 export type CandidateCardData = {
   id: string;
@@ -32,10 +37,12 @@ export type CandidateCardData = {
 export function CandidateCard({
   candidate,
   canManageFull,
+  canManageLimited,
   onEdit,
 }: {
   candidate: CandidateCardData;
   canManageFull: boolean;
+  canManageLimited: boolean;
   onEdit: () => void;
 }) {
   const router = useRouter();
@@ -80,22 +87,58 @@ export function CandidateCard({
             <Pencil className="size-4" />
             Edit
           </DropdownMenuItem>
-          {canManageFull && candidate.isActive && (
-            <DropdownMenuItem
+          {canManageLimited &&
+            (candidate.isActive ? (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={async () => {
+                  const result = await deactivateCandidateAction(candidate.id);
+                  if (result.ok) {
+                    toast.success("Candidate deactivated");
+                    router.refresh();
+                  } else {
+                    toast.error(result.message);
+                  }
+                }}
+              >
+                <UserX className="size-4" />
+                Deactivate
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onClick={async () => {
+                  const result = await activateCandidateAction(candidate.id);
+                  if (result.ok) {
+                    toast.success("Candidate activated");
+                    router.refresh();
+                  } else {
+                    toast.error(result.message);
+                  }
+                }}
+              >
+                <UserCheck className="size-4" />
+                Activate
+              </DropdownMenuItem>
+            ))}
+          {canManageFull && (
+            <ConfirmDialog
+              trigger={
+                <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              }
+              title={`Delete ${candidate.fullName}?`}
+              description="This permanently removes the candidate. This can't be undone."
+              confirmLabel="Delete"
               variant="destructive"
-              onClick={async () => {
-                const result = await deactivateCandidateAction(candidate.id);
-                if (result.ok) {
-                  toast.success("Candidate deactivated");
-                  router.refresh();
-                } else {
-                  toast.error(result.message);
-                }
+              onConfirm={async () => {
+                const result = await deleteCandidateAction(candidate.id);
+                if (!result.ok) throw new Error(result.message);
+                toast.success("Candidate deleted");
+                router.refresh();
               }}
-            >
-              <UserX className="size-4" />
-              Deactivate
-            </DropdownMenuItem>
+            />
           )}
         </DataTableRowActions>
       </div>
