@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Presentation, ChevronLeft } from "lucide-react";
+import { Presentation, ChevronLeft, CalendarClock, CalendarX2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
-import { getEventReadiness } from "@/lib/events/readiness";
+import { getEventReadiness, getElapsedPercent } from "@/lib/events/readiness";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
 import { RescheduleEventDialog } from "@/components/admin/reschedule-event-dialog";
@@ -20,8 +20,9 @@ import { EventAvatar } from "@/components/admin/event-avatar";
 import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { StatCards } from "@/components/admin/stat-cards";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 export default async function AdminEventDetailPage(props: PageProps<"/admin/events/[id]">) {
   const { id } = await props.params;
@@ -68,6 +69,19 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
   const adminIdentities = await getAdminIdentitiesByIds(
     [event.createdById, event.updatedById].filter((v): v is string => Boolean(v))
   );
+  const createdByName =
+    event.createdById && adminIdentities.has(event.createdById)
+      ? displayName(adminIdentities.get(event.createdById)!)
+      : null;
+  const updatedByName =
+    event.updatedById && adminIdentities.has(event.updatedById)
+      ? displayName(adminIdentities.get(event.updatedById)!)
+      : null;
+
+  const elapsedPercent =
+    votingEverActive && event.votingOpensAt && event.votingClosesAt
+      ? getElapsedPercent(event.votingOpensAt, event.votingClosesAt)
+      : null;
 
   const flatCandidates = event.categories.flatMap((category) =>
     category.candidates.map((candidate) => ({
@@ -101,21 +115,10 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <EventAvatar name={event.name} />
-            <h1 className="text-xl font-semibold">{event.name}</h1>
-            <StatusBadge status={event.archivedAt ? "ARCHIVED" : event.state} />
-            <Badge variant="outline">{event.eligibilityMode}</Badge>
-          </div>
-          <div className="mt-1">
-            <EntityMetadata
-              createdByName={event.createdById && adminIdentities.has(event.createdById) ? displayName(adminIdentities.get(event.createdById)!) : null}
-              createdAt={event.createdAt}
-              updatedByName={event.updatedById && adminIdentities.has(event.updatedById) ? displayName(adminIdentities.get(event.updatedById)!) : null}
-              updatedAt={event.updatedAt}
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <EventAvatar name={event.name} />
+          <h1 className="text-xl font-semibold">{event.name}</h1>
+          <StatusBadge status={event.archivedAt ? "ARCHIVED" : event.state} />
         </div>
         <div className="flex flex-wrap gap-2">
           {event.state === "FINALIZED" && (
@@ -153,17 +156,72 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
         <div className="flex flex-col gap-6 lg:col-span-4">
           {!readiness.isReady && event.state !== "FINALIZED" && <EventReadinessCard items={readiness.items} />}
 
-          <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium text-muted-foreground">Schedule</p>
-            {event.votingOpensAt && event.votingClosesAt ? (
-              <div className="mt-2 flex flex-col gap-1 text-sm">
-                <p>Opens: {event.votingOpensAt.toLocaleString()}</p>
-                <p>Closes: {event.votingClosesAt.toLocaleString()}</p>
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-muted-foreground">Not scheduled yet.</p>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {event.votingOpensAt && event.votingClosesAt ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-300">
+                      <CalendarClock className="size-4.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Opens</p>
+                      <p className="text-sm font-medium">{event.votingOpensAt.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                      <CalendarX2 className="size-4.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Closes</p>
+                      <p className="text-sm font-medium">{event.votingClosesAt.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  {elapsedPercent !== null && (
+                    <div>
+                      <Progress
+                        value={elapsedPercent}
+                        className="h-1.5"
+                        indicatorClassName={
+                          elapsedPercent >= 100
+                            ? "bg-red-500 dark:bg-red-400"
+                            : elapsedPercent >= 70
+                              ? "bg-amber-500 dark:bg-amber-400"
+                              : "bg-green-500 dark:bg-green-400"
+                        }
+                      />
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {elapsedPercent}% through the voting window
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Not scheduled yet.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {(createdByName || updatedByName) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EntityMetadata
+                  createdByName={createdByName}
+                  createdAt={event.createdAt}
+                  updatedByName={updatedByName}
+                  updatedAt={event.updatedAt}
+                  withAvatar
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
 

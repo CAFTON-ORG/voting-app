@@ -26,6 +26,18 @@ type ResultCandidate = {
 type ResultCategory = { id: string; name: string; totalVotes: number; candidates: ResultCandidate[] };
 type VoterRow = { email: string; fullName: string | null; votedAt: Date };
 
+// A distinct, cycling color per candidate row rather than one flat
+// bg-primary bar for everyone — makes a category's standings scannable
+// at a glance instead of reading as a wall of identical black bars.
+const PROGRESS_COLORS = [
+  "bg-blue-500 dark:bg-blue-400",
+  "bg-violet-500 dark:bg-violet-400",
+  "bg-amber-500 dark:bg-amber-400",
+  "bg-emerald-500 dark:bg-emerald-400",
+  "bg-rose-500 dark:bg-rose-400",
+  "bg-cyan-500 dark:bg-cyan-400",
+];
+
 function TabCount({ count }: { count: number }) {
   return (
     <span className="ml-1.5 rounded-full bg-background px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground group-data-[state=active]/tabs-list:text-foreground">
@@ -86,7 +98,7 @@ export function EventWorkspaceTabs({
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className="w-full">
+      <TabsList>
         <TabsTrigger value="categories">
           Categories
           <TabCount count={categories.length} />
@@ -147,7 +159,7 @@ export function EventWorkspaceTabs({
               <div key={category.id}>
                 <p className="text-sm font-medium">{category.name}</p>
                 <div className="mt-2 flex flex-col gap-3">
-                  {category.candidates.map((candidate) => (
+                  {category.candidates.map((candidate, index) => (
                     <div key={candidate.id} className="flex items-center gap-3">
                       <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-9 shrink-0" />
                       <div className="min-w-0 flex-1">
@@ -162,7 +174,11 @@ export function EventWorkspaceTabs({
                             </span>
                           </div>
                         </div>
-                        <Progress value={candidate.percentage} className="mt-1.5 h-1.5" />
+                        <Progress
+                          value={candidate.percentage}
+                          className="mt-1.5 h-1.5"
+                          indicatorClassName={PROGRESS_COLORS[index % PROGRESS_COLORS.length]}
+                        />
                       </div>
                     </div>
                   ))}

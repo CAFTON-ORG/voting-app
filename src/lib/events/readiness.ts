@@ -32,3 +32,15 @@ export function getEventReadiness(event: ReadinessInput): { items: ReadinessItem
 
   return { items, isReady: items.every((item) => item.complete) };
 }
+
+/** How far through the voting window "now" is, 0-100 — kept out of the
+ * page component's own body since reading the current time is an impure
+ * call the React Compiler's purity rule flags inside a component/hook,
+ * even in a Server Component where reading it once per request is exactly
+ * the intended behavior. */
+export function getElapsedPercent(opensAt: Date, closesAt: Date): number | null {
+  const total = closesAt.getTime() - opensAt.getTime();
+  if (total <= 0) return null;
+  const elapsed = Date.now() - opensAt.getTime();
+  return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+}

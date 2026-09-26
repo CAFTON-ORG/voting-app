@@ -68,7 +68,7 @@ export default async function CandidateDetailPage(
         {candidate.photoUrl ? (
           <CandidatePhotoLightbox photoUrl={candidate.photoUrl} fullName={candidate.fullName} />
         ) : (
-          <div className="relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-56">
+          <div className="relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-80">
             <div className="flex size-full items-center justify-center text-4xl font-semibold text-muted-foreground">
               {candidate.fullName
                 .split(" ")
@@ -142,7 +142,7 @@ export default async function CandidateDetailPage(
                   <p className="text-xs text-muted-foreground">votes</p>
                   <p className="ml-auto text-sm font-medium tabular-nums">{votePercentage}%</p>
                 </div>
-                <Progress value={votePercentage} />
+                <Progress value={votePercentage} indicatorClassName="bg-blue-500 dark:bg-blue-400" />
                 <p className="text-xs text-muted-foreground">
                   of {categoryTotalVotes} vote{categoryTotalVotes === 1 ? "" : "s"} cast in {candidate.category.name}
                 </p>

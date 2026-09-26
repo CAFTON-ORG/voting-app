@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, UserX } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTableRowActions } from "@/components/admin/data-table-row-actions";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -24,6 +24,11 @@ export type CandidateCardData = {
   categoryName: string;
 };
 
+/** Poster-style, matching the public ballot's CandidateCard visual
+ * language (photo fills the tile, number as a Badge, name overlaid on a
+ * gradient scrim) — an admin looking at this grid and the public one a
+ * voter sees should recognize it as the same candidate roster, not two
+ * unrelated designs. */
 export function CandidateCard({
   candidate,
   canManageFull,
@@ -36,7 +41,7 @@ export function CandidateCard({
   const router = useRouter();
 
   return (
-    <Card className="overflow-hidden py-0">
+    <div className="group relative flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-lg">
       <div className="relative aspect-4/5 w-full bg-muted">
         {candidate.photoUrl ? (
           <Image
@@ -44,7 +49,7 @@ export function CandidateCard({
             alt={candidate.fullName}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
@@ -56,48 +61,51 @@ export function CandidateCard({
               .join("")}
           </div>
         )}
-        <div className="absolute right-2 top-2">
+
+        <Badge className="absolute top-2 left-2 shadow-sm" variant="secondary">
+          #{candidate.candidateNumber}
+        </Badge>
+        <div className="absolute top-2 right-2">
           <StatusBadge status={candidate.isActive ? "ACTIVE" : "INACTIVE"} />
         </div>
-      </div>
-      <CardContent className="flex flex-col gap-1 py-3">
-        <p className="text-xs font-medium text-muted-foreground">#{candidate.candidateNumber}</p>
+
         <Link
           href={`/admin/events/${candidate.eventId}/candidates/${candidate.id}`}
-          className="truncate font-medium hover:underline"
+          className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent px-3 pt-8 pb-2"
         >
-          {candidate.fullName}
+          <p className="truncate font-medium text-white hover:underline">{candidate.fullName}</p>
         </Link>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 p-2.5">
         <p className="truncate text-xs text-muted-foreground">
           {candidate.programYear ? `${candidate.programYear} · ` : ""}
           {candidate.categoryName}
         </p>
-        <div className="mt-2 flex items-center justify-end">
-          <DataTableRowActions>
-            <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="size-4" />
-              Edit
+        <DataTableRowActions>
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
+          {canManageFull && candidate.isActive && (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                const result = await deactivateCandidateAction(candidate.id);
+                if (result.ok) {
+                  toast.success("Candidate deactivated");
+                  router.refresh();
+                } else {
+                  toast.error(result.message);
+                }
+              }}
+            >
+              <UserX className="size-4" />
+              Deactivate
             </DropdownMenuItem>
-            {canManageFull && candidate.isActive && (
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={async () => {
-                  const result = await deactivateCandidateAction(candidate.id);
-                  if (result.ok) {
-                    toast.success("Candidate deactivated");
-                    router.refresh();
-                  } else {
-                    toast.error(result.message);
-                  }
-                }}
-              >
-                <UserX className="size-4" />
-                Deactivate
-              </DropdownMenuItem>
-            )}
-          </DataTableRowActions>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </DataTableRowActions>
+      </div>
+    </div>
   );
 }
