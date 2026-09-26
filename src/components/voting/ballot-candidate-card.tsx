@@ -66,7 +66,7 @@ export function BallotCandidateCard({
 
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent px-3 pt-8 pb-2 transition-opacity",
+            "absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 from-15% to-transparent px-3 pt-8 pb-2.5 transition-opacity",
             selected ? "opacity-100" : "opacity-90"
           )}
         >
@@ -74,7 +74,7 @@ export function BallotCandidateCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 p-2.5">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
         <Button
           type="button"
           variant="link"
