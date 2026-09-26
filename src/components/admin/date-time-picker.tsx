@@ -44,6 +44,19 @@ const TIME_OPTIONS = Array.from({ length: (24 * 60) / TIME_STEP_MINUTES }, (_, i
   const displayHour = hours % 12 === 0 ? 12 : hours % 12;
   return { value: `${pad(hours)}:${pad(minutes)}`, label: `${displayHour}:${pad(minutes)} ${period}`, totalMinutes };
 });
+const LAST_SLOT_MINUTES = TIME_OPTIONS[TIME_OPTIONS.length - 1].totalMinutes;
+
+/** The next 15-minute slot strictly after `now` - e.g. 2:07 -> 2:15, and
+ * exactly 2:15:00.000 -> 2:30 (never "now" itself, since by the time the
+ * form is actually submitted a moment later, that instant has already
+ * passed too). Clamped to the day's last slot if `now` is past it. */
+function nextAvailableTime(now: Date): { hours: number; minutes: number } {
+  const minutes = Math.min(
+    Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / TIME_STEP_MINUTES) * TIME_STEP_MINUTES,
+    LAST_SLOT_MINUTES
+  );
+  return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
+}
 
 /** Calendar picks the date; a searchable time combobox (15-minute steps)
  * supplies the time-of-day — a plain Select with 96 options renders every
@@ -77,6 +90,16 @@ export function DateTimePicker({
     const merged = new Date(date);
     if (validValue) {
       merged.setHours(validValue.getHours(), validValue.getMinutes());
+    } else if (isSameCalendarDay(date, new Date())) {
+      // No time picked yet, and the chosen day is today - defaulting to
+      // midnight (00:00) here would silently produce a time already in
+      // the past for today (today is, by definition, already past its
+      // own midnight), exactly the kind of past-time value the picker
+      // otherwise disables picking directly. Snap to the next available
+      // 15-minute slot instead. A future date has no such problem, so it
+      // keeps the plain midnight default.
+      const { hours, minutes } = nextAvailableTime(new Date());
+      merged.setHours(hours, minutes, 0, 0);
     }
     onChange(merged);
   }
