@@ -8,6 +8,7 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { DomainsInput } from "@/components/admin/domains-input";
 import {
   Dialog,
   DialogContent,
@@ -100,12 +101,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                   <FormItem>
                     <FormLabel>Allowed voter domains</FormLabel>
                     <FormControl>
-                      <Input
-                        value={field.value.join(", ")}
-                        onChange={(e) =>
-                          field.onChange(e.target.value.split(",").map((d) => d.trim()).filter(Boolean))
-                        }
-                      />
+                      <DomainsInput value={field.value} onChange={field.onChange} placeholder="s.ubaguio.edu" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
