@@ -90,6 +90,13 @@ Development, which can safely point at different values):
   sent from, which is usually fine but means an invite sent from a preview
   deployment or a local dev server links to that host instead of the real
   domain.
+- `RESEND_API_KEY` and, optionally, `RESEND_FROM_EMAIL` — without these,
+  admin invites still work exactly as before (the invitation is created
+  and the admin shares the accept-invitation link manually), just without
+  an email going out. These are set per-environment like everything else
+  here, so a working local `.env` does **not** carry over to Vercel's
+  Production environment on its own — each Vercel environment
+  (Production/Preview/Development) needs them set independently.
 
 ## 6. Decide: same Supabase project, or a fresh one for production?
 
