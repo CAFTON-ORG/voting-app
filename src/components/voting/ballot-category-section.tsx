@@ -36,7 +36,7 @@ export function BallotCategorySection({
   return (
     <div id={`category-${category.id}`} className="scroll-mt-20">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold tracking-wide uppercase">{category.name}</h2>
+        <h2 className="font-heading text-base font-semibold tracking-wide uppercase">{category.name}</h2>
         <p className="text-xs text-muted-foreground">{category.candidates.length} candidates</p>
       </div>
       {category.description && <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>}

@@ -24,7 +24,7 @@ export function VotingUnavailableState({
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <Icon className="size-10 text-muted-foreground" />
-        <h1 className="text-lg font-semibold text-balance">{title}</h1>
+        <h1 className="font-heading text-xl font-semibold text-balance">{title}</h1>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
         {children}
         {footer && <div className="mt-4">{footer}</div>}

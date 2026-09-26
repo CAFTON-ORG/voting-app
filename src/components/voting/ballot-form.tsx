@@ -20,6 +20,7 @@ import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-
 import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
+import { AuroraGlow } from "@/components/shared/aurora-glow";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -88,10 +89,11 @@ export function BallotForm({
 
   if (step === "welcome") {
     return (
-      <div className="flex min-h-svh flex-col">
+      <div className="relative flex min-h-svh flex-col">
+        <AuroraGlow />
         <PublicHeader />
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6 py-16 text-center">
-          <h1 className="text-xl font-semibold">
+          <h1 className="font-heading text-2xl font-semibold">
             Welcome{voterName ? `, ${voterName.split(" ")[0]}!` : "!"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -117,13 +119,14 @@ export function BallotForm({
 
   if (step === "success" && submittedAt) {
     return (
-      <div className="flex min-h-svh flex-col">
+      <div className="relative flex min-h-svh flex-col">
+        <AuroraGlow />
         <PublicHeader />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
           <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
-            <CheckCircle2 className="size-12 text-primary" />
-            <h1 className="mt-6 text-xl font-semibold text-balance">Your vote has been submitted.</h1>
+            <CheckCircle2 className="size-12 text-primary motion-safe:animate-[fade-up_0.5s_ease-out]" />
+            <h1 className="font-heading mt-6 text-2xl font-semibold text-balance">Your vote has been submitted.</h1>
             <p className="mt-3 text-sm text-muted-foreground">
               Thank you for participating in <span className="font-medium text-foreground">{event.name}</span>.
               Your ballot was securely recorded.
@@ -154,7 +157,7 @@ export function BallotForm({
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
-            <h1 className="mt-8 text-lg font-semibold">Review your vote</h1>
+            <h1 className="font-heading mt-8 text-xl font-semibold">Review your vote</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Please review your selections carefully. Once submitted, your ballot cannot be changed.
             </p>
@@ -241,7 +244,7 @@ export function BallotForm({
       <PublicHeader />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
         <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.select} />
-        <h1 className="mt-8 text-lg font-semibold">{event.name}</h1>
+        <h1 className="font-heading mt-8 text-xl font-semibold">{event.name}</h1>
         <div className="mt-4">
           <VotingProgress total={event.categories.length} completed={completedCount} />
         </div>

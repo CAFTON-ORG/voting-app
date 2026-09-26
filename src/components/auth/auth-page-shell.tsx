@@ -30,7 +30,7 @@ export function AuthPageShell({
             {eyebrow && (
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{eyebrow}</p>
             )}
-            <CardTitle className="text-xl">{title}</CardTitle>
+            <CardTitle className="font-heading text-xl">{title}</CardTitle>
           </div>
           {description && <CardDescription className="text-balance">{description}</CardDescription>}
         </CardHeader>

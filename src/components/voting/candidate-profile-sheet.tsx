@@ -76,7 +76,7 @@ export function CandidateProfileSheet({
 
               <div>
                 <p className="text-sm text-muted-foreground">#{candidate.candidateNumber}</p>
-                <h2 className="text-lg font-semibold">{candidate.fullName}</h2>
+                <h2 className="font-heading text-lg font-semibold">{candidate.fullName}</h2>
                 <p className="text-sm text-muted-foreground">
                   {candidate.programYear ? `${candidate.programYear} · ` : ""}
                   {candidate.categoryName}
