@@ -29,7 +29,9 @@ async function getBaseUrl(): Promise<string> {
  * unique(email, status) constraint never blocks re-inviting someone —
  * ACCEPTED/REVOKED history for that email is preserved rather than
  * needing to be deleted first. */
-export async function inviteAdminAction(input: unknown): Promise<ActionResult<{ emailSent: boolean }>> {
+export async function inviteAdminAction(
+  input: unknown
+): Promise<ActionResult<{ emailSent: boolean; emailError?: string }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const data = inviteAdminSchema.parse(input);
@@ -79,7 +81,7 @@ export async function inviteAdminAction(input: unknown): Promise<ActionResult<{ 
       acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
     });
 
-    return ok({ emailSent: emailResult.ok });
+    return ok({ emailSent: emailResult.ok, emailError: emailResult.error });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not send the invitation. Please check the email address."));
   }
@@ -202,7 +204,9 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
  * configured, actually re-sends the invite email — before Resend, this
  * only ever extended the expiry window (invitees got the accept link
  * shared manually), so a "resend" was a bit of a misnomer. */
-export async function resendInvitationAction(invitationId: string): Promise<ActionResult<{ emailSent: boolean }>> {
+export async function resendInvitationAction(
+  invitationId: string
+): Promise<ActionResult<{ emailSent: boolean; emailError?: string }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const existingAdmins = await getAdminUsersWithEmail();
@@ -237,7 +241,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
     });
 
-    return ok({ emailSent: emailResult.ok });
+    return ok({ emailSent: emailResult.ok, emailError: emailResult.error });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not resend the invitation."));
   }

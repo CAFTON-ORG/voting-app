@@ -52,7 +52,11 @@ export function AddMemberDialog({ viewerRole }: { viewerRole: AdminRole }) {
       if (result.data.emailSent) {
         toast.success("Invitation sent");
       } else {
-        toast.warning("Invitation created, but the email couldn't be sent — share the accept link manually.");
+        toast.warning(
+          result.data.emailError
+            ? `Invitation created, but the email couldn't be sent: ${result.data.emailError}`
+            : "Invitation created, but the email couldn't be sent — share the accept link manually."
+        );
       }
       setOpen(false);
       router.refresh();
