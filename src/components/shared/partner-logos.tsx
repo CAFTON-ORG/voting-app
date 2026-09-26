@@ -1,21 +1,29 @@
 import Image from "next/image";
 import { Logo } from "@/components/shared/logo";
+import { CAFTON_WEBSITE_URL } from "@/lib/site";
 import { cn } from "cn";
 
 /** The three-mark partnership strip (Cafton, SIT, SIT-SAC) used anywhere the
  * platform needs to show who stands behind it — the public footer, the
  * auth/login shell, and anywhere else branding is expected. Real logo files
  * live in public/logos/; only Cafton's is an inline SVG component (it's a
- * simple vector wordmark already, not something that needs a raster file). */
+ * simple vector wordmark already, not something that needs a raster file).
+ * Cafton's own mark links out to cafton.com — SIT/SIT-SAC don't get one,
+ * since this app has no page to send that traffic to for them. */
 export function PartnerLogos({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center justify-center gap-4", className)}>
-      <div className="flex flex-col items-center gap-1.5">
+      <a
+        href={CAFTON_WEBSITE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex flex-col items-center gap-1.5 transition-opacity hover:opacity-80"
+      >
         <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
           <Logo size={20} />
         </div>
         <span className="text-[10px] font-medium text-muted-foreground">CAFTON</span>
-      </div>
+      </a>
 
       <div className="h-8 w-px bg-border" aria-hidden="true" />
 

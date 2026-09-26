@@ -8,6 +8,7 @@ import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { LogoScene } from "@/components/shared/logo-scene";
 import { Reveal } from "@/components/shared/reveal";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { CAFTON_WEBSITE_URL } from "@/lib/site";
 
 // Lists live events — without this, Next prerenders the query result at
 // build time (no dynamic API here to force dynamic rendering otherwise),
@@ -50,8 +51,16 @@ export default async function Home() {
           </Reveal>
           <Reveal delayMs={220}>
             <p className="max-w-md text-base text-muted-foreground">
-              Secure, one-account-one-vote elections for University of Baguio students and employees — powered by
-              CAFTON.
+              Secure, one-account-one-vote elections for University of Baguio students and employees — powered by{" "}
+              <a
+                href={CAFTON_WEBSITE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+              >
+                CAFTON
+              </a>
+              .
             </p>
           </Reveal>
         </section>

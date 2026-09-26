@@ -9,6 +9,7 @@ import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Reveal } from "@/components/shared/reveal";
+import { CAFTON_WEBSITE_URL } from "@/lib/site";
 
 type ResultCandidate = {
   id: string;
@@ -196,7 +197,15 @@ export function PresentationView({
       </div>
 
       <p className="mx-auto mt-24 max-w-4xl text-center text-xs text-white/30">
-        Voting Technology Partner — <span className="font-medium text-white/50">CAFTON</span>
+        Voting Technology Partner —{" "}
+        <a
+          href={CAFTON_WEBSITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-white/50 underline underline-offset-2 hover:text-white/70"
+        >
+          CAFTON
+        </a>
       </p>
     </div>
   );
