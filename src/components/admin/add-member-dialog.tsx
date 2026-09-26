@@ -40,7 +40,11 @@ export function AddMemberDialog() {
     setError(null);
     const result = await inviteAdminAction(values);
     if (result.ok) {
-      toast.success("Invitation sent");
+      if (result.data.emailSent) {
+        toast.success("Invitation sent");
+      } else {
+        toast.warning("Invitation created, but the email couldn't be sent — share the accept link manually.");
+      }
       setOpen(false);
       router.refresh();
     } else {

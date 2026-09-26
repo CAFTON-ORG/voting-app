@@ -134,7 +134,11 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
                     onClick={async () => {
                       const result = await resendInvitationAction(member.id);
                       if (result.ok) {
-                        toast.success("Invitation extended");
+                        toast.success(
+                          result.data.emailSent
+                            ? "Invitation extended and re-sent"
+                            : "Invitation extended, but the email couldn't be sent"
+                        );
                         router.refresh();
                       } else {
                         toast.error(result.message);

@@ -1,13 +1,21 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getTrustedIdentity } from "@/lib/auth/identity";
-import { getAdminUsersWithEmail } from "@/lib/admin/queries";
+import { getAdminUsersWithEmail, displayName } from "@/lib/admin/queries";
 import { inviteAdminSchema } from "@/lib/validation/admin";
+import { sendAdminInviteEmail } from "@/lib/email/resend";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
+
+async function getBaseUrl(): Promise<string> {
+  const host = (await headers()).get("host") ?? "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  return `${protocol}://${host}`;
+}
 
 /** True if `adminUserId` is the only active ADMIN — used to block actions
  * that would leave the system with no one able to manage it at all. */
@@ -24,7 +32,7 @@ async function isLastActiveAdmin(tx: Prisma.TransactionClient, adminUserId: stri
  * unique(email, status) constraint never blocks re-inviting someone —
  * ACCEPTED/REVOKED history for that email is preserved rather than
  * needing to be deleted first. */
-export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
+export async function inviteAdminAction(input: unknown): Promise<ActionResult<{ emailSent: boolean }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const data = inviteAdminSchema.parse(input);
@@ -59,7 +67,18 @@ export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
       });
     });
 
-    return ok(undefined);
+    // Best-effort: the invitation itself is already committed above either
+    // way, so a flaky email provider never blocks creating it — the admin
+    // can still share the accept link manually, same as before Resend.
+    const inviter = existingAdmins.find((a) => a.email.toLowerCase() === admin.email.toLowerCase());
+    const emailResult = await sendAdminInviteEmail({
+      to: email,
+      role: data.role,
+      inviterName: inviter ? displayName(inviter) : admin.email,
+      acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
+    });
+
+    return ok({ emailSent: emailResult.ok });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not send the invitation. Please check the email address."));
   }
@@ -171,14 +190,16 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
   }
 }
 
-/** "Resend" just extends the expiry on the existing pending row — there's
- * no outbound email system in this app yet (invitees are given the
- * /admin/accept-invitation link directly), so there's nothing to
- * re-send except the invitation's own validity window. */
-export async function resendInvitationAction(invitationId: string): Promise<ActionResult> {
+/** Extends the expiry on the existing pending row and, if Resend is
+ * configured, actually re-sends the invite email — before Resend, this
+ * only ever extended the expiry window (invitees got the accept link
+ * shared manually), so a "resend" was a bit of a misnomer. */
+export async function resendInvitationAction(invitationId: string): Promise<ActionResult<{ emailSent: boolean }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
-    await prisma.$transaction(async (tx) => {
+    const existingAdmins = await getAdminUsersWithEmail();
+
+    const invitation = await prisma.$transaction(async (tx) => {
       const invitation = await tx.adminInvitation.findUniqueOrThrow({ where: { id: invitationId } });
       if (invitation.status !== "PENDING") {
         throw new Error("Only a pending invitation can be resent.");
@@ -194,8 +215,18 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
           metadata: { email: invitation.email },
         },
       });
+      return invitation;
     });
-    return ok(undefined);
+
+    const inviter = existingAdmins.find((a) => a.email.toLowerCase() === admin.email.toLowerCase());
+    const emailResult = await sendAdminInviteEmail({
+      to: invitation.email,
+      role: invitation.role,
+      inviterName: inviter ? displayName(inviter) : admin.email,
+      acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
+    });
+
+    return ok({ emailSent: emailResult.ok });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not resend the invitation."));
   }
