@@ -165,8 +165,17 @@ export function CategoryManager({
                 <div className="flex items-center gap-1">
                   {onViewCandidates && (
                     <Button variant="ghost" size="sm" onClick={() => onViewCandidates(category.id)}>
-                      <ListChecks className="size-3.5" />
-                      View candidates
+                      {category.candidateCount === 0 ? (
+                        <>
+                          <Plus className="size-3.5" />
+                          Add candidates
+                        </>
+                      ) : (
+                        <>
+                          <ListChecks className="size-3.5" />
+                          View candidates
+                        </>
+                      )}
                     </Button>
                   )}
                   {canManageFull && (
