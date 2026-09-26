@@ -49,7 +49,7 @@ export function CandidateCard({
             alt={candidate.fullName}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
@@ -61,6 +61,12 @@ export function CandidateCard({
               .join("")}
           </div>
         )}
+
+        {/* A flat tint instead of scaling the photo on hover — scaling a
+            fill-positioned image risks visible overflow/clipping at the
+            card's rounded corners; this reads as "hovered" just as clearly
+            without moving the image at all. */}
+        <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
 
         <Badge className="absolute top-2 left-2 shadow-sm" variant="secondary">
           #{candidate.candidateNumber}
