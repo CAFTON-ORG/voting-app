@@ -10,17 +10,63 @@ import { Reveal } from "@/components/shared/reveal";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
 import { CAFTON_WEBSITE_URL } from "@/lib/site";
+import type { EventState } from "@prisma/client";
 
 // Lists live events — without this, Next prerenders the query result at
 // build time (no dynamic API here to force dynamic rendering otherwise),
 // baking in whatever events existed at deploy time until the next build.
 export const dynamic = "force-dynamic";
 
+type HomeEvent = {
+  id: string;
+  slug: string;
+  name: string;
+  state: EventState;
+  candidates: { id: string; fullName: string; photoUrl: string | null }[];
+};
+
+/** One shared card for both the "Open for voting" and "Voting closed"
+ * lists - same look either way, since a past event's own page is still
+ * worth visiting (candidates, when it ran), just no longer accepting
+ * ballots. VotingStatusBadge already renders a distinct "Voting Closed"
+ * badge for CLOSED/FINALIZED, so the two lists read as clearly different
+ * even sharing one card design. */
+function EventCard({ event, delayMs }: { event: HomeEvent; delayMs: number }) {
+  return (
+    <Reveal delayMs={delayMs}>
+      <Link
+        href={`/events/${event.slug}`}
+        className="group flex items-center justify-between gap-4 rounded-2xl border bg-card p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+      >
+        <div className="min-w-0">
+          <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <VotingStatusBadge state={event.state} />
+            <CandidateAvatarStack candidates={event.candidates} />
+          </div>
+        </div>
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+          <ArrowUpRight className="size-5 transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+        </div>
+      </Link>
+    </Reveal>
+  );
+}
+
 export default async function Home() {
-  const [events, identity] = await Promise.all([
+  const [allEvents, identity] = await Promise.all([
     prisma.event.findMany({
-      where: { state: "OPEN" },
-      orderBy: { createdAt: "desc" },
+      // Archived is a deliberate soft-hide independent of state (see the
+      // Event model) - an archived CLOSED/FINALIZED event stays out of
+      // the default list here too, same as it already does in the admin
+      // events list. DRAFT/SCHEDULED stay excluded as before (nothing
+      // public to show yet); CLOSED/FINALIZED are now included alongside
+      // OPEN, since a past event is still real public information (who
+      // ran, that it happened) even once voting has ended - the same
+      // "never expose candidate-level results" policy still applies on
+      // its own page regardless of state.
+      where: { state: { in: ["OPEN", "CLOSED", "FINALIZED"] }, archivedAt: null },
+      orderBy: [{ votingOpensAt: "desc" }, { createdAt: "desc" }],
       include: {
         candidates: {
           where: { isActive: true },
@@ -31,6 +77,8 @@ export default async function Home() {
     }),
     getTrustedIdentity(),
   ]);
+  const openEvents = allEvents.filter((e) => e.state === "OPEN");
+  const pastEvents = allEvents.filter((e) => e.state !== "OPEN");
 
   return (
     <div className="relative flex min-h-svh flex-col">
@@ -80,7 +128,7 @@ export default async function Home() {
           <h2 className="mb-6 text-sm font-medium tracking-wide text-muted-foreground uppercase">
             Open for voting
           </h2>
-          {events.length === 0 ? (
+          {openEvents.length === 0 ? (
             <Reveal
               delayMs={280}
               className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center"
@@ -95,28 +143,25 @@ export default async function Home() {
             </Reveal>
           ) : (
             <div className="flex flex-col gap-4">
-              {events.map((event, index) => (
-                <Reveal key={event.id} delayMs={280 + index * 80}>
-                  <Link
-                    href={`/events/${event.slug}`}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border bg-card p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <VotingStatusBadge state={event.state} />
-                        <CandidateAvatarStack candidates={event.candidates} />
-                      </div>
-                    </div>
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                      <ArrowUpRight className="size-5 transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </div>
-                  </Link>
-                </Reveal>
+              {openEvents.map((event, index) => (
+                <EventCard key={event.id} event={event} delayMs={280 + index * 80} />
               ))}
             </div>
           )}
         </section>
+
+        {pastEvents.length > 0 && (
+          <section className="border-t pt-12 pb-24">
+            <h2 className="mb-6 text-sm font-medium tracking-wide text-muted-foreground uppercase">
+              Voting closed
+            </h2>
+            <div className="flex flex-col gap-4">
+              {pastEvents.map((event, index) => (
+                <EventCard key={event.id} event={event} delayMs={280 + index * 80} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <PublicFooter />
