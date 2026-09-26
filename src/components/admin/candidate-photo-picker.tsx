@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Camera, Pencil, X } from "lucide-react";
+import { cn } from "cn";
 import { validateCandidatePhoto, InvalidCandidatePhotoError, MAX_FILE_SIZE_BYTES } from "@/lib/storage/candidate-photo";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -65,7 +65,7 @@ export function CandidatePhotoPicker({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-center gap-2">
       <input
         ref={inputRef}
         type="file"
@@ -76,33 +76,52 @@ export function CandidatePhotoPicker({
         }}
         className="hidden"
       />
-      <div className="flex items-center gap-3">
-        {previewUrl && (
-          // A blob: object URL, not a servable image - next/image's
-          // optimizer can't fetch it, so a plain <img> is the right tool
-          // here, same as Radix Avatar.Image elsewhere in this app.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
-        )}
-        <div className="flex flex-col items-start gap-1">
-          <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-            <ImagePlus className="size-3.5" />
-            {file ? "Change photo" : "Upload photo"}
-          </Button>
-          {file ? (
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
-            >
-              <X className="size-3" />
-              Remove
-            </button>
-          ) : (
-            <span className="text-[10px] text-muted-foreground">JPEG, PNG, WebP · up to 10MB</span>
+      <div className="group relative">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            "flex size-28 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50",
+            previewUrl && "border-solid border-transparent hover:border-transparent"
           )}
-        </div>
+        >
+          {previewUrl ? (
+            <>
+              {/* A blob: object URL, not a servable image - next/image's
+                  optimizer can't fetch it, so a plain <img> is the right
+                  tool here, same as Radix Avatar.Image elsewhere in this
+                  app. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewUrl} alt="" className="size-full rounded-full object-cover" />
+              <span className="absolute inset-0 hidden items-center justify-center rounded-full bg-black/50 group-hover:flex">
+                <Pencil className="size-5 text-white" />
+              </span>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 px-2 text-muted-foreground">
+              <div className="flex size-9 items-center justify-center rounded-full bg-background text-foreground shadow-sm">
+                <Camera className="size-4" />
+              </div>
+              <span className="text-xs font-medium">Upload photo</span>
+            </div>
+          )}
+        </button>
+        {previewUrl && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="absolute top-0 right-0 flex size-6 items-center justify-center rounded-full bg-foreground text-background shadow-sm hover:bg-destructive"
+          >
+            <X className="size-3.5" />
+            <span className="sr-only">Remove photo</span>
+          </button>
+        )}
       </div>
+      <p className="text-center text-[10px] text-muted-foreground">
+        Allowed *.jpeg, *.jpg, *.png, *.webp
+        <br />
+        max size of 10MB
+      </p>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
