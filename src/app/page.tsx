@@ -56,32 +56,35 @@ export default async function Home() {
           </Reveal>
         </section>
 
-        <section className="border-t pb-24">
+        <section className="border-t pt-12 pb-24">
+          <h2 className="mb-6 text-sm font-medium tracking-wide text-muted-foreground uppercase">
+            Open for voting
+          </h2>
           {events.length === 0 ? (
-            <Reveal delayMs={280} className="py-16 text-center">
+            <Reveal delayMs={280} className="rounded-2xl border border-dashed py-16 text-center">
               <p className="text-base text-muted-foreground">Voting opens soon. Check back shortly.</p>
             </Reveal>
           ) : (
-            <ul>
+            <div className="flex flex-col gap-4">
               {events.map((event, index) => (
                 <Reveal key={event.id} delayMs={280 + index * 80}>
-                  <li className="border-b">
-                    <Link
-                      href={`/events/${event.slug}`}
-                      className="group flex items-center justify-between gap-4 py-7 transition-colors hover:text-primary"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
-                        <div className="mt-2">
-                          <VotingStatusBadge state={event.state} />
-                        </div>
+                  <Link
+                    href={`/events/${event.slug}`}
+                    className="group flex items-center justify-between gap-4 rounded-2xl border bg-card p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
+                      <div className="mt-2">
+                        <VotingStatusBadge state={event.state} />
                       </div>
-                      <ArrowUpRight className="size-6 shrink-0 text-muted-foreground transition-transform duration-300 ease-out group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-primary" />
-                    </Link>
-                  </li>
+                    </div>
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <ArrowUpRight className="size-5 transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </div>
+                  </Link>
                 </Reveal>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </main>
