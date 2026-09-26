@@ -44,9 +44,7 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
                   squeezed or clipped when the sidebar collapses. */}
               <SidebarMenuButton asChild size="lg" className="hover:bg-transparent active:bg-transparent">
                 <Link href="/admin">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
-                    <Logo size={16} />
-                  </div>
+                  <Logo size={28} className="shrink-0" />
                   <div className="grid flex-1 text-left leading-tight">
                     <span className="text-sm font-semibold tracking-tight">CAFTON</span>
                     <span className="text-xs text-muted-foreground">Voting Admin</span>
