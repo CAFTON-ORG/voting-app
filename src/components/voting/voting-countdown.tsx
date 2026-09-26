@@ -2,12 +2,23 @@
 
 import { useSyncExternalStore } from "react";
 
+// Cached at module scope and only advanced on each tick, not read live in
+// getSnapshot — useSyncExternalStore calls getSnapshot repeatedly during
+// render to check for tearing, and a value that changes on every single
+// call (like a raw Date.now()) makes it look like the store never settles,
+// which throws "The result of getSnapshot should be cached to avoid an
+// infinite loop."
+let cachedNow = Date.now();
+
 function subscribe(callback: () => void) {
-  const id = setInterval(callback, 1000);
+  const id = setInterval(() => {
+    cachedNow = Date.now();
+    callback();
+  }, 1000);
   return () => clearInterval(id);
 }
 function getSnapshot() {
-  return Date.now();
+  return cachedNow;
 }
 // 0 is the "not mounted yet" sentinel — matches what the server rendered,
 // so hydration never mismatches on the exact second of a live clock.
