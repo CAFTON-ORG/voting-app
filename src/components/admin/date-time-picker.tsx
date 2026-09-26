@@ -20,10 +20,12 @@ export function DateTimePicker({
   value,
   onChange,
   placeholder = "Pick a date and time",
+  invalid = false,
 }: {
   value: Date | undefined;
   onChange: (date: Date | undefined) => void;
   placeholder?: string;
+  invalid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -60,7 +62,8 @@ export function DateTimePicker({
             variant="outline"
             className={cn(
               "min-w-0 flex-1 basis-40 justify-start overflow-hidden text-left font-normal",
-              !value && "text-muted-foreground"
+              !value && "text-muted-foreground",
+              invalid && "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40"
             )}
           >
             <CalendarIcon className="size-4 shrink-0" />

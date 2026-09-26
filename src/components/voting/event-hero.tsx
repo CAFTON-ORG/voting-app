@@ -39,7 +39,7 @@ export function EventHero({
   return (
     <div className="flex flex-col items-center gap-5 px-6 pt-12 pb-8 text-center sm:pt-16">
       <div
-        className="flex size-16 items-center justify-center rounded-2xl sm:size-20"
+        className="flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
         style={{ backgroundColor: bg, color: fg }}
       >
         <CalendarDays className="size-8 sm:size-9" />
@@ -47,7 +47,7 @@ export function EventHero({
 
       <div>
         {organizer && <p className="text-sm font-medium text-muted-foreground">{organizer}</p>}
-        <h1 className="mt-1 text-2xl font-semibold text-balance sm:text-3xl">{name}</h1>
+        <h1 className="font-heading mt-1 text-3xl font-semibold text-balance sm:text-4xl">{name}</h1>
       </div>
 
       <VotingStatusBadge state={state} />

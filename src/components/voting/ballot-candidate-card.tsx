@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Check } from "lucide-react";
 import { RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "cn";
 import type { PublicCandidateProfile } from "@/components/voting/candidate-profile-sheet";
@@ -12,7 +13,9 @@ import type { PublicCandidateProfile } from "@/components/voting/candidate-profi
  * "checked" announcements, and click-anywhere selection all come from
  * Radix's own RadioGroup semantics rather than being reimplemented here.
  * Selection state is deliberately redundant (icon + badge text + border +
- * background), never color alone. */
+ * background), never color alone. Deliberately just number + name — the
+ * rest of a candidate's info (program, tagline, bio) lives one tap away
+ * in the profile sheet instead of crowding the selection grid. */
 export function BallotCandidateCard({
   candidate,
   selected,
@@ -25,8 +28,8 @@ export function BallotCandidateCard({
   return (
     <label
       className={cn(
-        "group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border transition-colors",
-        selected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/40"
+        "group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+        selected ? "border-primary bg-primary/5 ring-2 ring-primary" : "border-border hover:bg-muted/40"
       )}
     >
       <RadioGroupItem value={candidate.id} className="sr-only" />
@@ -38,7 +41,7 @@ export function BallotCandidateCard({
             alt={candidate.fullName}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
@@ -50,28 +53,33 @@ export function BallotCandidateCard({
               .join("")}
           </div>
         )}
+
+        <Badge className="absolute top-2 left-2 shadow-sm" variant="secondary">
+          #{candidate.candidateNumber}
+        </Badge>
+
         {selected && (
-          <div className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+          <div className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
             <Check className="size-4" />
           </div>
         )}
+
+        <div
+          className={cn(
+            "absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 from-15% to-transparent px-3 pt-8 pb-2.5 transition-opacity",
+            selected ? "opacity-100" : "opacity-90"
+          )}
+        >
+          <p className="font-heading truncate font-semibold text-white">{candidate.fullName}</p>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <p className="text-xs font-medium text-muted-foreground">#{candidate.candidateNumber}</p>
-        <p className="truncate font-medium">{candidate.fullName}</p>
-        {candidate.programYear && (
-          <p className="truncate text-xs text-muted-foreground">{candidate.programYear}</p>
-        )}
-        {candidate.tagline && (
-          <p className="truncate text-xs italic text-muted-foreground">&quot;{candidate.tagline}&quot;</p>
-        )}
-
+      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
         <Button
           type="button"
           variant="link"
           size="sm"
-          className="mt-1 h-auto justify-start px-0 text-xs"
+          className="h-auto px-0 text-xs"
           onClick={(e) => {
             e.preventDefault();
             onViewProfile();
@@ -82,19 +90,19 @@ export function BallotCandidateCard({
 
         <div
           className={cn(
-            "mt-auto flex items-center gap-1.5 pt-2 text-sm font-medium",
+            "flex items-center gap-1.5 text-xs font-medium",
             selected ? "text-primary" : "text-muted-foreground"
           )}
         >
           {selected ? (
             <>
-              <Check className="size-4" />
+              <Check className="size-3.5" />
               Selected
             </>
           ) : (
             <>
-              <span className="flex size-4 items-center justify-center rounded-full border border-current" />
-              Select Candidate
+              <span className="flex size-3.5 items-center justify-center rounded-full border border-current" />
+              Select
             </>
           )}
         </div>

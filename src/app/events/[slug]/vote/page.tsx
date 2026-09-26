@@ -3,6 +3,7 @@ import { Clock, PauseCircle, CircleCheck, CircleSlash } from "lucide-react";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
@@ -15,6 +16,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
   const { slug } = await props.params;
   const event = await getVotableEvent(slug);
   if (!event) notFound();
+  if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   const identity = await getTrustedIdentity();
   if (!identity) {
@@ -53,6 +55,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
             : undefined
         }
         footer={signedInFooter}
+        signedInEmail={identity.email}
       >
         {event.votingOpensAt && <VotingCountdown target={event.votingOpensAt} label="Starts in" />}
       </VotingUnavailableState>
@@ -66,6 +69,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Voting is temporarily paused."
         description="Please check back shortly."
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }
@@ -81,6 +85,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
             : "Thank you to everyone who participated."
         }
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }
@@ -93,6 +98,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Vote already submitted"
         description="Your vote for this event has already been recorded. Thank you for participating."
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }

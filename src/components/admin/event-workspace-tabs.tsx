@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/admin/user-avatar";
@@ -10,8 +10,10 @@ import { CandidateAvatar } from "@/components/voting/candidate-avatar";
 import { CategoryManager, type CategoryRow } from "@/components/admin/category-manager";
 import { CandidatesGrid } from "@/components/admin/candidates-grid";
 import { CandidateFormSheet, type CandidateFormValues } from "@/components/admin/candidate-form-sheet";
+import { DataTable, SortableHeader } from "@/components/admin/data-table";
 import { EmptyState } from "@/components/admin/empty-state";
 import type { CandidateCardData } from "@/components/admin/candidate-card";
+import { getPercentageColor } from "@/lib/format/progress-color";
 import { BarChart3, Users } from "lucide-react";
 
 type CategoryOption = { id: string; name: string };
@@ -25,6 +27,43 @@ type ResultCandidate = {
 };
 type ResultCategory = { id: string; name: string; totalVotes: number; candidates: ResultCandidate[] };
 type VoterRow = { email: string; fullName: string | null; votedAt: Date };
+type VoterTableRow = VoterRow & { id: string };
+
+// Paginated via DataTable rather than rendered as one flat .map() — an
+// event with a large electorate would otherwise put every voter row in the
+// DOM (and the initial HTML payload) at once. See getVoterParticipations'
+// own row cap for the corresponding query-side limit.
+const voterColumns: ColumnDef<VoterTableRow>[] = [
+  {
+    accessorKey: "email",
+    header: ({ column }) => (
+      <SortableHeader label="Voter" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+    ),
+    cell: ({ row }) => {
+      const label = row.original.fullName || row.original.email;
+      return (
+        <div className="flex items-center gap-2">
+          <UserAvatar label={label} size="sm" />
+          <div>
+            <p className="text-sm">{label}</p>
+            {row.original.fullName && <p className="text-xs text-muted-foreground">{row.original.email}</p>}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "votedAt",
+    header: ({ column }) => (
+      <div className="text-right">
+        <SortableHeader label="Voted at" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="text-right text-muted-foreground">{row.original.votedAt.toLocaleString()}</div>
+    ),
+  },
+];
 
 function TabCount({ count }: { count: number }) {
   return (
@@ -59,6 +98,7 @@ export function EventWorkspaceTabs({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<CandidateFormValues | undefined>();
   const [presetCategoryId, setPresetCategoryId] = useState<string | undefined>();
+  const [categoryJump, setCategoryJump] = useState<{ categoryName: string; token: number } | undefined>();
 
   const categoryOptions: CategoryOption[] = categories.map((c) => ({ id: c.id, name: c.name }));
 
@@ -86,7 +126,7 @@ export function EventWorkspaceTabs({
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className="w-full">
+      <TabsList>
         <TabsTrigger value="categories">
           Categories
           <TabCount count={categories.length} />
@@ -110,15 +150,18 @@ export function EventWorkspaceTabs({
           categories={categories}
           canManageFull={canManageFull}
           canManageLimited={canManageLimited}
-          onCreated={(categoryId) => {
+          onViewCandidates={(categoryId) => {
+            const category = categories.find((c) => c.id === categoryId);
+            if (!category) return;
+            setCategoryJump((prev) => ({ categoryName: category.name, token: (prev?.token ?? 0) + 1 }));
             setTab("candidates");
-            openCreate(categoryId);
           }}
         />
       </TabsContent>
 
       <TabsContent value="candidates" className="mt-4">
         <CandidatesGrid
+          key={categoryJump?.token}
           eventId={eventId}
           categories={categoryOptions}
           candidates={candidates}
@@ -126,6 +169,7 @@ export function EventWorkspaceTabs({
           canManageLimited={canManageLimited}
           onAdd={() => openCreate()}
           onEdit={openEdit}
+          initialCategoryFilter={categoryJump?.categoryName}
         />
       </TabsContent>
 
@@ -162,7 +206,11 @@ export function EventWorkspaceTabs({
                             </span>
                           </div>
                         </div>
-                        <Progress value={candidate.percentage} className="mt-1.5 h-1.5" />
+                        <Progress
+                          value={candidate.percentage}
+                          className="mt-1.5 h-1.5"
+                          indicatorClassName={getPercentageColor(candidate.percentage)}
+                        />
                       </div>
                     </div>
                   ))}
@@ -179,35 +227,12 @@ export function EventWorkspaceTabs({
       {canSeeVoters && (
         <TabsContent value="voters" className="mt-4">
           {voters && voters.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Voter</TableHead>
-                  <TableHead className="text-right">Voted at</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {voters.map((voter) => {
-                  const label = voter.fullName || voter.email;
-                  return (
-                    <TableRow key={voter.email + voter.votedAt.toISOString()}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <UserAvatar label={label} size="sm" />
-                          <div>
-                            <p className="text-sm">{label}</p>
-                            {voter.fullName && <p className="text-xs text-muted-foreground">{voter.email}</p>}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {voter.votedAt.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={voterColumns}
+              data={voters.map((voter) => ({ ...voter, id: voter.email }))}
+              searchPlaceholder="Search voters…"
+              emptyMessage="No voters match your search."
+            />
           ) : (
             <EmptyState
               icon={Users}

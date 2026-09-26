@@ -16,9 +16,9 @@ export function CandidatePhotoLightbox({ photoUrl, fullName }: { photoUrl: strin
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-56"
+        className="group relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-80"
       >
-        <Image src={photoUrl} alt={fullName} fill className="object-cover" />
+        <Image src={photoUrl} alt={fullName} fill sizes="(min-width: 640px) 20rem, 100vw" className="object-cover" />
         <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
           <Expand className="size-6 text-white" />
         </span>

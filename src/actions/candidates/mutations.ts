@@ -97,6 +97,10 @@ export async function reorderCategoriesAction(input: unknown): Promise<ActionRes
     const data = reorderCategoriesSchema.parse(input);
 
     await prisma.$transaction(async (tx) => {
+      const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
+      if (event.state === "FINALIZED") {
+        throw new Error("This event's results have been finalized and its categories are frozen.");
+      }
       await Promise.all(
         data.orderedCategoryIds.map((categoryId, index) =>
           tx.candidateCategory.update({

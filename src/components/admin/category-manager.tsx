@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ArrowUp, ArrowDown, Plus, Pencil, Trash2, FolderTree } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Pencil, Trash2, FolderTree, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,6 +18,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
 import {
@@ -25,6 +27,8 @@ import {
   deleteCategoryAction,
   reorderCategoriesAction,
 } from "@/actions/candidates/mutations";
+import { createCategorySchema } from "@/lib/validation/events";
+import type { z } from "zod";
 
 export type CategoryRow = {
   id: string;
@@ -33,63 +37,69 @@ export type CategoryRow = {
   candidateCount: number;
 };
 
+const categoryFormSchema = createCategorySchema.pick({ name: true, description: true });
+type FormValues = z.infer<typeof categoryFormSchema>;
+
 export function CategoryManager({
   eventId,
   categories,
   canManageFull,
   canManageLimited,
-  onCreated,
+  /** Jumps straight to that category's row in the Candidates tab right
+   * after it's created — the natural next step — instead of opening the
+   * candidate form over top of this dialog closing. */
+  onViewCandidates,
 }: {
   eventId: string;
   categories: CategoryRow[];
   canManageFull: boolean;
   canManageLimited: boolean;
-  /** Called with the new category's id right after a successful create
-   * (not edit) — lets the workspace guide the admin straight into adding
-   * that category's first candidate instead of leaving them to find the
-   * Candidates tab themselves. */
-  onCreated?: (categoryId: string) => void;
+  onViewCandidates?: (categoryId: string) => void;
 }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(categoryFormSchema),
+    mode: "onChange",
+    defaultValues: { name: "", description: "" },
+  });
+
+  useEffect(() => {
+    if (dialogOpen) form.reset({ name: editing?.name ?? "", description: editing?.description ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, editing?.id]);
 
   function openCreate() {
     setEditing(null);
-    setName("");
-    setDescription("");
     setDialogOpen(true);
   }
 
   function openEdit(category: CategoryRow) {
     setEditing(category);
-    setName(category.name);
-    setDescription(category.description ?? "");
     setDialogOpen(true);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onSubmit(values: FormValues) {
     setError(null);
-    startTransition(async () => {
-      const result = editing
-        ? await updateCategoryAction({ categoryId: editing.id, name, description: description || undefined })
-        : await createCategoryAction({ eventId, name, description: description || undefined, displayOrder: categories.length });
-      if (result.ok) {
-        toast.success(editing ? "Category updated" : "Category added");
-        setDialogOpen(false);
-        if (!editing && result.data && "id" in result.data) {
-          onCreated?.(result.data.id);
-        }
-        router.refresh();
-      } else {
-        setError(result.message);
-      }
-    });
+    const result = editing
+      ? await updateCategoryAction({ categoryId: editing.id, name: values.name, description: values.description || undefined })
+      : await createCategoryAction({
+          eventId,
+          name: values.name,
+          description: values.description || undefined,
+          displayOrder: categories.length,
+        });
+    if (result.ok) {
+      toast.success(editing ? "Category updated" : "Category added");
+      setDialogOpen(false);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -97,8 +107,9 @@ export function CategoryManager({
     const target = index + direction;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
-    startTransition(async () => {
-      const result = await reorderCategoriesAction({ eventId, orderedCategoryIds: next.map((c) => c.id) });
+    setPending(true);
+    reorderCategoriesAction({ eventId, orderedCategoryIds: next.map((c) => c.id) }).then((result) => {
+      setPending(false);
       if (result.ok) {
         router.refresh();
       } else {
@@ -145,6 +156,12 @@ export function CategoryManager({
                   <p className="mt-1 text-xs text-muted-foreground">{category.candidateCount} candidates</p>
                 </div>
                 <div className="flex items-center gap-1">
+                  {onViewCandidates && (
+                    <Button variant="ghost" size="sm" onClick={() => onViewCandidates(category.id)}>
+                      <ListChecks className="size-3.5" />
+                      View candidates
+                    </Button>
+                  )}
                   {canManageFull && (
                     <>
                       <Button
@@ -200,38 +217,53 @@ export function CategoryManager({
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit category" : "Add category"}</DialogTitle>
-              <DialogDescription>
-                E.g. &quot;Mr. SIT&quot; — &quot;Official male candidate category for Mr. &amp; Ms. SIT 2026.&quot;
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="category-name">Name</Label>
-                <Input id="category-name" required value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="category-description">Description (optional)</Label>
-                <Textarea
-                  id="category-description"
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <DialogHeader>
+                <DialogTitle>{editing ? "Edit category" : "Add category"}</DialogTitle>
+                <DialogDescription>
+                  E.g. &quot;Mr. SIT&quot; — &quot;Official male candidate category for Mr. &amp; Ms. SIT 2026.&quot;
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea rows={3} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {error && <p className="text-sm text-destructive">{error}</p>}
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={pending || !name.trim()}>
-                {pending ? "Saving…" : editing ? "Save changes" : "Add Category"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "Saving…" : editing ? "Save changes" : "Add Category"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

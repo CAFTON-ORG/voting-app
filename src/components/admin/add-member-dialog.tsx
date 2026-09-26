@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -17,35 +18,47 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { inviteAdminSchema } from "@/lib/validation/admin";
 import { inviteAdminAction } from "@/actions/admin/invitations";
-import type { AdminRole } from "@prisma/client";
+import type { z } from "zod";
+
+type FormValues = z.infer<typeof inviteAdminSchema>;
 
 export function AddMemberDialog() {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<AdminRole>("MODERATOR");
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const form = useForm<FormValues>({
+    resolver: zodResolver(inviteAdminSchema),
+    mode: "onChange",
+    defaultValues: { email: "", role: "MODERATOR" },
+  });
+
+  async function onSubmit(values: FormValues) {
     setError(null);
-    startTransition(async () => {
-      const result = await inviteAdminAction({ email, role });
-      if (result.ok) {
-        toast.success("Invitation sent");
-        setEmail("");
-        setOpen(false);
-        router.refresh();
-      } else {
-        setError(result.message);
-      }
-    });
+    const result = await inviteAdminAction(values);
+    if (result.ok) {
+      toast.success("Invitation sent");
+      setOpen(false);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          form.reset();
+          setError(null);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm">
           <UserPlus className="size-3.5" />
@@ -53,48 +66,62 @@ export function AddMemberDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add member</DialogTitle>
-            <DialogDescription>
-              They will sign in with Google and accept at /admin/accept-invitation to gain access.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-email">Email</Label>
-              <Input
-                id="invite-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>Add member</DialogTitle>
+              <DialogDescription>
+                They will sign in with Google and accept at /admin/accept-invitation to gain access.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
+                        <SelectItem value="MODERATOR">MODERATOR</SelectItem>
+                        <SelectItem value="AUDITOR">AUDITOR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-role">Role</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as AdminRole)}>
-                <SelectTrigger id="invite-role" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADMIN">ADMIN</SelectItem>
-                  <SelectItem value="MODERATOR">MODERATOR</SelectItem>
-                  <SelectItem value="AUDITOR">AUDITOR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Sending…" : "Send Invitation"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Sending…" : "Send Invitation"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

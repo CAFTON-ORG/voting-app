@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -16,39 +17,52 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { editEventSchema } from "@/lib/validation/events";
 import { editEventAction } from "@/actions/events/mutations";
 import type { Event } from "@prisma/client";
+import type { z } from "zod";
+
+type FormValues = z.infer<typeof editEventSchema>;
 
 export function EditEventDialog({ event }: { event: Event }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(event.name);
-  const [allowedDomains, setAllowedDomains] = useState(event.allowedDomains.join(", "));
-  const [showPublicBallotCount, setShowPublicBallotCount] = useState(event.showPublicBallotCount);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const form = useForm<FormValues>({
+    resolver: zodResolver(editEventSchema),
+    mode: "onChange",
+    defaultValues: {
+      eventId: event.id,
+      name: event.name,
+      allowedDomains: event.allowedDomains,
+      showPublicBallotCount: event.showPublicBallotCount,
+    },
+  });
+
+  async function onSubmit(values: FormValues) {
     setError(null);
-    startTransition(async () => {
-      const result = await editEventAction({
-        eventId: event.id,
-        name,
-        allowedDomains: allowedDomains.split(",").map((d) => d.trim()).filter(Boolean),
-        showPublicBallotCount,
-      });
-      if (result.ok) {
-        setOpen(false);
-        router.refresh();
-      } else {
-        setError(result.message);
-      }
-    });
+    const result = await editEventAction(values);
+    if (result.ok) {
+      setOpen(false);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          form.reset();
+          setError(null);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Pencil className="size-3.5" />
@@ -56,47 +70,71 @@ export function EditEventDialog({ event }: { event: Event }) {
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit event</DialogTitle>
-            <DialogDescription>
-              Name, allowed domains, and the public ballot-count toggle can be changed anytime before
-              results are finalized.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-name">Event name</Label>
-              <Input id="edit-name" required value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-domains">Allowed voter domains</Label>
-              <Input
-                id="edit-domains"
-                required
-                value={allowedDomains}
-                onChange={(e) => setAllowedDomains(e.target.value)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>Edit event</DialogTitle>
+              <DialogDescription>
+                Name, allowed domains, and the public ballot-count toggle can be changed anytime before
+                results are finalized.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="edit-ballot-count">Show public ballot count</Label>
-              <Switch
-                id="edit-ballot-count"
-                checked={showPublicBallotCount}
-                onCheckedChange={setShowPublicBallotCount}
+              <FormField
+                control={form.control}
+                name="allowedDomains"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed voter domains</FormLabel>
+                    <FormControl>
+                      <Input
+                        value={field.value.join(", ")}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.split(",").map((d) => d.trim()).filter(Boolean))
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+              <FormField
+                control={form.control}
+                name="showPublicBallotCount"
+                render={({ field }) => (
+                  <FormItem className="flex-row items-center justify-between">
+                    <FormLabel>Show public ballot count</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Save changes"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -175,6 +175,10 @@ model BallotSelection {
   // Exactly one selection per category per ballot.
   @@unique([ballotId, categoryId])
   @@index([ballotId])
+  // Live/final results group by candidateId (see getCandidateResults) —
+  // without this, that aggregation is a sequential scan of every selection
+  // ever cast, repeated on every results-tab render while voting is open.
+  @@index([candidateId])
   @@map("ballot_selections")
 }
 
@@ -252,5 +256,9 @@ model AuditLog {
   actorAdmin AdminUser? @relation(fields: [actorAdminId], references: [id], onDelete: SetNull)
 
   @@index([eventId, createdAt])
+  // The global audit log page (no eventId filter) sorts by createdAt alone
+  // — a composite index led by eventId can't serve that sort, so it needs
+  // its own.
+  @@index([createdAt])
   @@map("audit_logs")
 }

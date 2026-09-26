@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma/client";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getBallotCount } from "@/lib/results/queries";
+import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { EventHero } from "@/components/voting/event-hero";
 import { CandidatePreviewGrid } from "@/components/voting/candidate-preview-grid";
+import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { Reveal } from "@/components/shared/reveal";
 
 /** Public event page. Deliberately shows only a total ballot count (and
  * only when the event owner enabled it) — never candidate-level totals,
@@ -23,8 +27,12 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
     },
   });
   if (!event || event.state === "DRAFT") notFound();
+  if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
-  const ballotCount = event.showPublicBallotCount ? await getBallotCount(event.id) : null;
+  const [ballotCount, identity] = await Promise.all([
+    event.showPublicBallotCount ? getBallotCount(event.id) : Promise.resolve(null),
+    getTrustedIdentity(),
+  ]);
 
   const candidates = event.categories.flatMap((category) =>
     category.candidates.map((candidate) => ({
@@ -38,27 +46,41 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   );
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <PublicHeader />
+    <div className="relative flex min-h-svh flex-col">
+      <AuroraGlow />
+      <PublicHeader signedInEmail={identity?.email} />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 pb-16">
-        <EventHero
-          name={event.name}
-          organizer="University of Baguio"
-          state={event.state}
-          votingOpensAt={event.votingOpensAt}
-          votingClosesAt={event.votingClosesAt}
-          slug={slug}
-          ballotCount={ballotCount}
-        />
+        <Reveal>
+          <EventHero
+            name={event.name}
+            organizer="University of Baguio · School of Information Technology"
+            state={event.state}
+            votingOpensAt={event.votingOpensAt}
+            votingClosesAt={event.votingClosesAt}
+            slug={slug}
+            ballotCount={ballotCount}
+          />
+        </Reveal>
 
-        {candidates.length > 0 && (
-          <div>
-            <h2 className="text-center text-lg font-semibold">Meet the Candidates</h2>
-            <div className="mt-6">
-              <CandidatePreviewGrid candidates={candidates} />
-            </div>
-          </div>
-        )}
+        <Reveal delayMs={150}>
+          {event.categories.length === 0 ? (
+            <>
+              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Voting categories haven&apos;t been configured yet.
+              </p>
+            </>
+          ) : candidates.length === 0 ? (
+            <>
+              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Candidates haven&apos;t been announced yet.
+              </p>
+            </>
+          ) : (
+            <CandidatePreviewGrid candidates={candidates} />
+          )}
+        </Reveal>
       </main>
       <PublicFooter />
     </div>
