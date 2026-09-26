@@ -37,6 +37,14 @@ export const scheduleEventSchema = z
   .refine((data) => data.votingClosesAt > data.votingOpensAt, {
     message: "Closing time must be after opening time",
     path: ["votingClosesAt"],
+  })
+  // DateTimePicker's own calendar/time-list already disable picking a past
+  // date or time client-side, but that's a UI convenience, not the
+  // security boundary - this Server Action is, so the same rule is
+  // re-checked here regardless of what the client actually sent.
+  .refine((data) => data.votingOpensAt > new Date(), {
+    message: "Voting can't be scheduled to open in the past",
+    path: ["votingOpensAt"],
   });
 
 export const rescheduleEventSchema = scheduleEventSchema;
