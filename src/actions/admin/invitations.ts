@@ -11,7 +11,15 @@ import { inviteAdminSchema } from "@/lib/validation/admin";
 import { sendAdminInviteEmail } from "@/lib/email/resend";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
+/** NEXT_PUBLIC_APP_URL, when set, always wins - so an invite triggered
+ * from a local dev server or a preview deployment still emails a link to
+ * the real production domain rather than whichever host the request
+ * actually came in on. Without it, falls back to the request's own host
+ * header, which is fine for local-only testing (and matches how
+ * google-sign-in-button.tsx/auth/callback derive their own origin) but
+ * means an admin testing against localhost will get a localhost link. */
 async function getBaseUrl(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
   const host = (await headers()).get("host") ?? "localhost:3000";
   const protocol = host.startsWith("localhost") ? "http" : "https";
   return `${protocol}://${host}`;
