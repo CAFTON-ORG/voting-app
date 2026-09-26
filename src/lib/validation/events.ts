@@ -8,6 +8,11 @@ export const createEventSchema = z.object({
   allowedDomains: z
     .array(z.string().trim().min(1))
     .min(1, "At least one allowed domain is required"),
+  // No .default() here - the form's own defaultValues always sends a
+  // real boolean (never omits the field), and z.boolean().default(...)
+  // would otherwise make this field optional on input vs. required on
+  // output, which breaks useForm's single shared FormValues type.
+  showPublicBallotCount: z.boolean(),
 });
 
 export const editEventSchema = z.object({
