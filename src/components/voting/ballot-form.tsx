@@ -11,6 +11,9 @@ import {
   ClipboardCheck,
   Lock,
   ChevronLeft,
+  EyeOff,
+  UserCheck,
+  ScrollText,
 } from "lucide-react";
 import { castBallotAction } from "@/actions/voting/cast-ballot";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,7 @@ export function BallotForm({
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [profileCandidate, setProfileCandidate] = useState<PublicCandidateProfile | null>(null);
 
   const allSelected = event.categories.every((category) => selections[category.id]);
@@ -108,7 +112,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader />
+        <PublicHeader signedInEmail={signedInEmail} />
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-16">
           <div className="text-center">
             <Badge
@@ -147,9 +151,60 @@ export function BallotForm({
               Start Voting
             </Button>
             <SignedInBar email={signedInEmail} redirectTo={`/events/${event.slug}/vote`} />
+            <p className="text-center text-xs text-muted-foreground">
+              By continuing, you agree to how this election handles your data — see the{" "}
+              <button
+                type="button"
+                onClick={() => setPrivacyOpen(true)}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Privacy Notice
+              </button>
+              .
+            </p>
           </div>
         </main>
         <PublicFooter />
+
+        <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ScrollText className="size-4.5" />
+                Privacy Notice
+              </DialogTitle>
+              <DialogDescription>What this election collects, and how your vote stays anonymous.</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 text-sm">
+              <div className="flex gap-3">
+                <UserCheck className="size-4.5 shrink-0 text-muted-foreground" />
+                <p>
+                  Signing in shares your Google account&apos;s name and email with this election, used only to
+                  confirm you&apos;re eligible and that you vote at most once.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <EyeOff className="size-4.5 shrink-0 text-muted-foreground" />
+                <p>
+                  Your selections are stored separately from your identity. There is no record anywhere linking
+                  your account to who you voted for — not even administrators can see it.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Lock className="size-4.5 shrink-0 text-muted-foreground" />
+                <p>
+                  Administrators can see <em>that</em> your account voted and when, for turnout and eligibility
+                  purposes only, and can see result totals — never an individual ballot&apos;s selections.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPrivacyOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -158,7 +213,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader />
+        <PublicHeader signedInEmail={signedInEmail} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
           <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
@@ -190,7 +245,7 @@ export function BallotForm({
   if (step === "review") {
     return (
       <div className="flex min-h-svh flex-col">
-        <PublicHeader />
+        <PublicHeader signedInEmail={signedInEmail} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
@@ -284,7 +339,7 @@ export function BallotForm({
 
   return (
     <div className="flex min-h-svh flex-col">
-      <PublicHeader />
+      <PublicHeader signedInEmail={signedInEmail} />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
         <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.select} />
         <h1 className="font-heading mt-8 text-xl font-semibold">{event.name}</h1>

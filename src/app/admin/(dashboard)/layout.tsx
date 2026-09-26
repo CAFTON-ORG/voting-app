@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { NavUser } from "@/components/admin/nav-user";
-import { NavUserPopover } from "@/components/admin/nav-user-popover";
 import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
 import { SidebarNav } from "@/components/admin/sidebar-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -87,8 +86,6 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
             <AdminCommandMenu role={admin.role} />
           </div>
           <ThemeToggle />
-          <Separator orientation="vertical" className="h-4" />
-          <NavUserPopover email={admin.email} role={admin.role} />
         </header>
         <main className="flex-1 overflow-x-hidden p-6 sm:p-8 lg:p-10">{children}</main>
       </SidebarInset>

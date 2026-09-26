@@ -55,6 +55,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
             : undefined
         }
         footer={signedInFooter}
+        signedInEmail={identity.email}
       >
         {event.votingOpensAt && <VotingCountdown target={event.votingOpensAt} label="Starts in" />}
       </VotingUnavailableState>
@@ -68,6 +69,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Voting is temporarily paused."
         description="Please check back shortly."
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }
@@ -83,6 +85,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
             : "Thank you to everyone who participated."
         }
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }
@@ -95,6 +98,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Vote already submitted"
         description="Your vote for this event has already been recorded. Thank you for participating."
         footer={signedInFooter}
+        signedInEmail={identity.email}
       />
     );
   }

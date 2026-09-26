@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/prisma/client";
+import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
@@ -14,15 +15,15 @@ import { AuroraGlow } from "@/components/shared/aurora-glow";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const events = await prisma.event.findMany({
-    where: { state: "OPEN" },
-    orderBy: { createdAt: "desc" },
-  });
+  const [events, identity] = await Promise.all([
+    prisma.event.findMany({ where: { state: "OPEN" }, orderBy: { createdAt: "desc" } }),
+    getTrustedIdentity(),
+  ]);
 
   return (
     <div className="relative flex min-h-svh flex-col">
       <AuroraGlow />
-      <PublicHeader />
+      <PublicHeader signedInEmail={identity?.email} />
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6">
         <section className="flex flex-col items-center gap-6 pt-20 pb-16 text-center sm:pt-28">

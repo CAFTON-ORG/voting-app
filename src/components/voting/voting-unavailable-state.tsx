@@ -12,16 +12,18 @@ export function VotingUnavailableState({
   description,
   children,
   footer,
+  signedInEmail,
 }: {
   icon: LucideIcon;
   title: string;
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  signedInEmail?: string;
 }) {
   return (
     <div className="flex min-h-svh flex-col">
-      <PublicHeader />
+      <PublicHeader signedInEmail={signedInEmail} />
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <Icon className="size-10 text-muted-foreground" />
         <h1 className="font-heading text-xl font-semibold text-balance">{title}</h1>

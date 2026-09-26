@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma/client";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getBallotCount } from "@/lib/results/queries";
+import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { EventHero } from "@/components/voting/event-hero";
@@ -28,7 +29,10 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   if (!event || event.state === "DRAFT") notFound();
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
-  const ballotCount = event.showPublicBallotCount ? await getBallotCount(event.id) : null;
+  const [ballotCount, identity] = await Promise.all([
+    event.showPublicBallotCount ? getBallotCount(event.id) : Promise.resolve(null),
+    getTrustedIdentity(),
+  ]);
 
   const candidates = event.categories.flatMap((category) =>
     category.candidates.map((candidate) => ({
@@ -44,7 +48,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   return (
     <div className="relative flex min-h-svh flex-col">
       <AuroraGlow />
-      <PublicHeader />
+      <PublicHeader signedInEmail={identity?.email} />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 pb-16">
         <Reveal>
           <EventHero
