@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { renderAdminInviteEmail } from "@/lib/email/templates/admin-invite";
 
 /** Used only for admin invitation emails — nothing voter-facing sends
  * email at all. Optional by design: if RESEND_API_KEY isn't set, invites
@@ -28,16 +29,8 @@ export async function sendAdminInviteEmail({
 }): Promise<{ ok: boolean; error?: string }> {
   if (!resend) return { ok: false, error: "Email is not configured on this server." };
 
-  const { error } = await resend.emails.send({
-    from: RESEND_FROM_EMAIL,
-    to,
-    subject: "You've been invited to the Mr. & Ms. SIT admin team",
-    html: `
-      <p>${inviterName} invited you to join the Mr. &amp; Ms. SIT admin team as <strong>${role}</strong>.</p>
-      <p><a href="${acceptUrl}">Accept the invitation</a> — sign in with the Google account this was sent to.</p>
-      <p style="color:#666;font-size:12px">This invitation expires in 7 days. If you weren't expecting this, you can ignore this email.</p>
-    `,
-  });
+  const { subject, html, text } = renderAdminInviteEmail({ inviterName, role, acceptUrl });
+  const { error } = await resend.emails.send({ from: RESEND_FROM_EMAIL, to, subject, html, text });
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
