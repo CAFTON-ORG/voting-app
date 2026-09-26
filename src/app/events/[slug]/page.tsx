@@ -47,7 +47,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
         <Reveal>
           <EventHero
             name={event.name}
-            organizer="University of Baguio"
+            organizer="University of Baguio · School of Information Technology"
             state={event.state}
             votingOpensAt={event.votingOpensAt}
             votingClosesAt={event.votingClosesAt}
@@ -57,20 +57,23 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
         </Reveal>
 
         <Reveal delayMs={150}>
-          <h2 className="font-heading text-center text-xl font-semibold">Meet the Candidates</h2>
-          <div className="mt-6">
-            {event.categories.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground">
+          {event.categories.length === 0 ? (
+            <>
+              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
                 Voting categories haven&apos;t been configured yet.
               </p>
-            ) : candidates.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground">
+            </>
+          ) : candidates.length === 0 ? (
+            <>
+              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
                 Candidates haven&apos;t been announced yet.
               </p>
-            ) : (
-              <CandidatePreviewGrid candidates={candidates} />
-            )}
-          </div>
+            </>
+          ) : (
+            <CandidatePreviewGrid candidates={candidates} />
+          )}
         </Reveal>
       </main>
       <PublicFooter />

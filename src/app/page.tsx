@@ -30,7 +30,9 @@ export default async function Home() {
             <LogoScene size={128} />
           </Reveal>
           <Reveal delayMs={100}>
-            <p className="text-sm font-medium text-muted-foreground">University of Baguio</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              University of Baguio · School of Information Technology
+            </p>
           </Reveal>
           <Reveal delayMs={150} className="max-w-2xl">
             <h1 className="font-heading text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl">

@@ -30,10 +30,13 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** Purely cosmetic — ticks toward `target` client-side for a sense of
  * urgency/reassurance only. Never the source of truth for whether voting
  * is actually open: cast_ballot() re-checks the server clock against the
- * event's real schedule on every submission regardless of what this shows. */
+ * event's real schedule on every submission regardless of what this shows.
+ * Clamps at 00:00:00 once `target` has passed rather than disappearing —
+ * an OPEN event can outlive its scheduled close time until an admin
+ * actually closes it, and hiding the whole row there reads as a bug. */
 export function VotingCountdown({ target, label }: { target: Date; label: string }) {
   const now = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  if (now === 0 || target.getTime() <= now) return null;
+  if (now === 0) return null;
 
   const { days, hours, minutes, seconds } = splitDuration(target.getTime() - now);
 

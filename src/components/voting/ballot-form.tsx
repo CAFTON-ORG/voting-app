@@ -2,9 +2,20 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Check, CheckCircle2 } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  ShieldCheck,
+  Eye,
+  CircleDot,
+  ClipboardCheck,
+  Lock,
+  ChevronLeft,
+} from "lucide-react";
 import { castBallotAction } from "@/actions/voting/cast-ballot";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -88,27 +99,53 @@ export function BallotForm({
   }
 
   if (step === "welcome") {
+    const instructions = [
+      { icon: Eye, text: "Review each candidate carefully." },
+      { icon: CircleDot, text: "Select one candidate per category." },
+      { icon: ClipboardCheck, text: "Review your selections before submitting." },
+      { icon: Lock, text: "Submitted votes cannot be changed." },
+    ];
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
         <PublicHeader />
-        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6 py-16 text-center">
-          <h1 className="font-heading text-2xl font-semibold">
-            Welcome{voterName ? `, ${voterName.split(" ")[0]}!` : "!"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            You&apos;re verified and eligible to vote in <span className="font-medium text-foreground">{event.name}</span>.
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5 text-left text-sm text-muted-foreground">
-            <li>• Review each candidate carefully.</li>
-            <li>• Select one candidate per category.</li>
-            <li>• Review your selections before submitting.</li>
-            <li>• Submitted votes cannot be changed.</li>
-          </ul>
-          <Button className="mt-4" onClick={() => setStep("select")}>
-            Start Voting
-          </Button>
-          <div className="mt-2">
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-16">
+          <div className="text-center">
+            <Badge
+              variant="outline"
+              className="mb-3 border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/60 dark:text-green-300"
+            >
+              <ShieldCheck className="size-3.5" />
+              Verified voter
+            </Badge>
+            <h1 className="font-heading text-2xl font-semibold">
+              Welcome{voterName ? `, ${voterName.split(" ")[0]}!` : "!"}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              You&apos;re eligible to vote in <span className="font-medium text-foreground">{event.name}</span>.
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Before you begin</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {instructions.map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Icon className="size-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm">{text}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-col items-center gap-3">
+            <Button size="lg" className="w-full" onClick={() => setStep("select")}>
+              Start Voting
+            </Button>
             <SignedInBar email={signedInEmail} redirectTo={`/events/${event.slug}/vote`} />
           </div>
         </main>
@@ -157,7 +194,16 @@ export function BallotForm({
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
-            <h1 className="font-heading mt-8 text-xl font-semibold">Review your vote</h1>
+            <button
+              type="button"
+              onClick={() => setStep("select")}
+              disabled={pending}
+              className="mt-8 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="size-4" />
+              Back to Candidates
+            </button>
+            <h1 className="font-heading mt-4 text-xl font-semibold">Review your vote</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Please review your selections carefully. Once submitted, your ballot cannot be changed.
             </p>
@@ -205,11 +251,8 @@ export function BallotForm({
         <PublicFooter />
 
         <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
-          <div className="mx-auto flex w-full max-w-md items-center gap-3">
-            <Button variant="outline" onClick={() => setStep("select")} disabled={pending}>
-              Back
-            </Button>
-            <Button onClick={() => setConfirmOpen(true)} disabled={pending} className="flex-1">
+          <div className="mx-auto flex w-full max-w-md">
+            <Button onClick={() => setConfirmOpen(true)} disabled={pending} className="w-full">
               Submit My Vote
             </Button>
           </div>
