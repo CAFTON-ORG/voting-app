@@ -1,11 +1,15 @@
 import type { ReactNode } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Logo } from "@/components/shared/logo";
+import { PartnerLogos } from "@/components/shared/partner-logos";
+import { AuroraGlow } from "@/components/shared/aurora-glow";
 
 /** One consistent shell for every sign-in-adjacent page (admin login,
  * accept-invitation, voter sign-in, auth error) — these previously each
  * hand-rolled the same centered "title + description + content" layout
- * with no shared visual identity. */
+ * with no shared visual identity. Carries the same AuroraGlow backdrop and
+ * partner-logo strip as the rest of the public site, so a login page
+ * doesn't read as a separate, unbranded surface. */
 export function AuthPageShell({
   eyebrow,
   title,
@@ -20,11 +24,12 @@ export function AuthPageShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30 px-6 py-12">
-      <Card className="w-full max-w-sm shadow-sm">
+    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted/30 px-6 py-12">
+      <AuroraGlow />
+      <Card className="w-full max-w-sm rounded-2xl border-border/60 shadow-lg shadow-black/3 dark:shadow-black/20">
         <CardHeader className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background">
-            <Logo size={20} aria-hidden="true" />
+          <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
+            <Logo size={22} aria-hidden="true" />
           </div>
           <div>
             {eyebrow && (
@@ -35,9 +40,10 @@ export function AuthPageShell({
           {description && <CardDescription className="text-balance">{description}</CardDescription>}
         </CardHeader>
         {children && <CardContent className="flex flex-col gap-4">{children}</CardContent>}
-        {footer && (
-          <CardFooter className="flex justify-center text-xs text-muted-foreground">{footer}</CardFooter>
-        )}
+        <CardFooter className="flex flex-col gap-4 border-t pt-5">
+          <PartnerLogos />
+          {footer && <p className="text-center text-xs text-muted-foreground">{footer}</p>}
+        </CardFooter>
       </Card>
     </div>
   );
