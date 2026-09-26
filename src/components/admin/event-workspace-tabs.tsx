@@ -116,8 +116,6 @@ export function EventWorkspaceTabs({
       candidateNumber: candidate.candidateNumber,
       fullName: candidate.fullName,
       programYear: candidate.programYear ?? "",
-      tagline: candidate.tagline ?? "",
-      bio: candidate.bio ?? "",
       photoUrl: candidate.photoUrl,
     });
     setPresetCategoryId(undefined);

@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -24,9 +24,7 @@ import {
   updateCandidateLimitedAction,
   updateCandidateStructuralAction,
 } from "@/actions/candidates/mutations";
-import { createCandidateSchema } from "@/lib/validation/events";
 import { CandidatePhotoUpload } from "@/components/admin/candidate-photo-upload";
-import type { z } from "zod";
 
 type CategoryOption = { id: string; name: string };
 
@@ -36,24 +34,45 @@ export type CandidateFormValues = {
   candidateNumber: number;
   fullName: string;
   programYear: string;
-  tagline: string;
-  bio: string;
   photoUrl: string | null;
 };
 
-const candidateFormSchema = createCandidateSchema.pick({
-  categoryId: true,
-  candidateNumber: true,
-  fullName: true,
-  programYear: true,
-  tagline: true,
-  bio: true,
+const COURSES = ["BSCS", "BSIT", "BSCPE", "ACT"] as const;
+const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
+
+/** programYear is stored as one "COURSE - Nth Year" string (no schema
+ * change needed, and every existing display of candidate.programYear
+ * keeps working unchanged) — these two just compose/decompose that string
+ * for the two dropdowns. A programYear that predates this format (free
+ * text) just doesn't pre-fill either dropdown, rather than guessing. */
+function parseProgramYear(programYear: string): { course: string; yearLevel: string } {
+  const [rawCourse, rawYearLevel] = programYear.split(" - ").map((s) => s.trim());
+  return {
+    course: (COURSES as readonly string[]).includes(rawCourse) ? rawCourse : "",
+    yearLevel: (YEAR_LEVELS as readonly string[]).includes(rawYearLevel) ? rawYearLevel : "",
+  };
+}
+
+function composeProgramYear(course: string, yearLevel: string): string | undefined {
+  if (course && yearLevel) return `${course} - ${yearLevel}`;
+  return course || yearLevel || undefined;
+}
+
+const candidateFormSchema = z.object({
+  categoryId: z.uuid({ error: "Choose a category" }),
+  // Only rendered/used in edit mode with structural permission — on
+  // create, the number is never asked for, always assigned server-side.
+  candidateNumber: z.coerce.number().int().positive("Must be a positive number").optional(),
+  fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters"),
+  course: z.string().trim().optional(),
+  yearLevel: z.string().trim().optional(),
 });
 // candidateNumber is z.coerce.number(), so its *input* type (what the raw
 // <input> can hand the resolver, including an in-progress empty string) is
 // `unknown` while its *output* type (what onSubmit receives after
-// successful coercion) is `number` — the two need separate type params on
-// useForm, or TS sees a real number where the form only ever has one.
+// successful coercion) is `number | undefined` — the two need separate
+// type params on useForm, or TS sees a real number where the form only
+// ever has an unvalidated draft.
 type FormInput = z.input<typeof candidateFormSchema>;
 type FormOutput = z.output<typeof candidateFormSchema>;
 
@@ -69,7 +88,9 @@ export function CandidateFormSheet({
    * doesn't require re-picking it from the dropdown. */
   presetCategoryId,
   /** Structural fields (number/category) are only editable in this window
-   * — see assertStructuralChangesAllowed in the server action. */
+   * — see assertStructuralChangesAllowed in the server action. On create,
+   * the candidate number is never asked for at all — it's always the next
+   * free number in the category, assigned server-side. */
   canEditStructural,
 }: {
   open: boolean;
@@ -84,13 +105,13 @@ export function CandidateFormSheet({
   const router = useRouter();
 
   function defaults(): FormInput {
+    const { course, yearLevel } = parseProgramYear(initialValues?.programYear ?? "");
     return {
       categoryId: initialValues?.categoryId ?? presetCategoryId ?? categories[0]?.id ?? "",
       candidateNumber: initialValues?.candidateNumber ?? "",
       fullName: initialValues?.fullName ?? "",
-      programYear: initialValues?.programYear ?? "",
-      tagline: initialValues?.tagline ?? "",
-      bio: initialValues?.bio ?? "",
+      course,
+      yearLevel,
     };
   }
 
@@ -110,17 +131,18 @@ export function CandidateFormSheet({
   }, [open, initialValues?.id]);
 
   async function onSubmit(values: FormOutput) {
+    const programYear = composeProgramYear(values.course ?? "", values.yearLevel ?? "");
+
     if (isEdit && initialValues) {
       const results = await Promise.all([
         updateCandidateLimitedAction({
           candidateId: initialValues.id,
           fullName: values.fullName,
-          programYear: values.programYear || undefined,
-          tagline: values.tagline || undefined,
-          bio: values.bio || undefined,
+          programYear,
         }),
         canEditStructural &&
-        (values.categoryId !== initialValues.categoryId || values.candidateNumber !== initialValues.candidateNumber)
+        values.candidateNumber !== undefined &&
+        values.candidateNumber !== initialValues.candidateNumber
           ? updateCandidateStructuralAction({
               candidateId: initialValues.id,
               categoryId: values.categoryId,
@@ -138,11 +160,8 @@ export function CandidateFormSheet({
       const result = await createCandidateAction({
         eventId,
         categoryId: values.categoryId,
-        candidateNumber: values.candidateNumber,
         fullName: values.fullName,
-        programYear: values.programYear || undefined,
-        tagline: values.tagline || undefined,
-        bio: values.bio || undefined,
+        programYear,
         displayOrder: 0,
       });
       if (!result.ok) {
@@ -163,9 +182,11 @@ export function CandidateFormSheet({
             <SheetHeader>
               <SheetTitle>{isEdit ? "Edit candidate" : "Add candidate"}</SheetTitle>
               <SheetDescription>
-                {canEditStructural
-                  ? "Full details, including category and number."
-                  : "Number and category are locked once voting could have started."}
+                {isEdit
+                  ? canEditStructural
+                    ? "Full details, including category and number."
+                    : "Number and category are locked once voting could have started."
+                  : "The candidate number is assigned automatically."}
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-1 flex-col gap-4 px-4">
@@ -200,28 +221,30 @@ export function CandidateFormSheet({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="candidateNumber"
-                  render={({ field }) => (
-                    <FormItem className="w-24">
-                      <FormLabel>Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          disabled={!canEditStructural}
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                          value={field.value as string | number}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isEdit && (
+                  <FormField
+                    control={form.control}
+                    name="candidateNumber"
+                    render={({ field }) => (
+                      <FormItem className="w-24">
+                        <FormLabel>Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            disabled={!canEditStructural}
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                            value={field.value as string | number}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
               <FormField
                 control={form.control}
@@ -236,45 +259,56 @@ export function CandidateFormSheet({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="programYear"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Program/Year (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tagline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tagline (optional)</FormLabel>
-                    <FormControl>
-                      <Input maxLength={280} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Biography (optional)</FormLabel>
-                    <FormControl>
-                      <Textarea rows={5} maxLength={2000} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="flex gap-3">
+                <FormField
+                  control={form.control}
+                  name="course"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Course (optional)</FormLabel>
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select course" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {COURSES.map((course) => (
+                            <SelectItem key={course} value={course}>
+                              {course}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yearLevel"
+                  render={({ field }) => (
+                    <FormItem className="w-32">
+                      <FormLabel>Year level</FormLabel>
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {YEAR_LEVELS.map((year) => (
+                            <SelectItem key={year} value={year}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               {form.formState.errors.root && (
                 <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
               )}
