@@ -63,8 +63,17 @@ function composeProgramYear(course: string, yearLevel: string): string | undefin
 const candidateFormSchema = z.object({
   categoryId: z.uuid({ error: "Choose a category" }),
   // Only rendered/used in edit mode with structural permission — on
-  // create, the number is never asked for, always assigned server-side.
-  candidateNumber: z.coerce.number().int().positive("Must be a positive number").optional(),
+  // create, the number is never asked for, always assigned server-side,
+  // and its default value is "" (see defaults() below). z.coerce.number()
+  // on its own turns "" into 0 (Number("") === 0, not NaN), which then
+  // fails .positive() - silently blocking every create submission
+  // regardless of what else was filled in, since this field is never
+  // rendered in create mode for the resulting error to attach to. The
+  // preprocess step treats "" the same as an actually-absent value.
+  candidateNumber: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().int().positive("Must be a positive number").optional()
+  ),
   fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters"),
   course: z.string().trim().min(1, "Course is required"),
   yearLevel: z.string().trim().min(1, "Year level is required"),
