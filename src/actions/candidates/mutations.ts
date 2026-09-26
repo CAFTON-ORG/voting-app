@@ -127,8 +127,8 @@ export async function reorderCategoriesAction(input: unknown): Promise<ActionRes
 
 export async function deleteCategoryAction(categoryId: string): Promise<ActionResult> {
   try {
+    const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
     await prisma.$transaction(async (tx) => {
-      const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
       const category = await tx.candidateCategory.findUniqueOrThrow({ where: { id: categoryId } });
       const event = await tx.event.findUniqueOrThrow({ where: { id: category.eventId } });
       assertStructuralChangesAllowed(event.state);
@@ -239,8 +239,8 @@ export async function updateCandidateStructuralAction(input: unknown): Promise<A
 
 export async function deactivateCandidateAction(candidateId: string): Promise<ActionResult> {
   try {
+    const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
     await prisma.$transaction(async (tx) => {
-      const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
       const candidate = await tx.candidate.findUniqueOrThrow({ where: { id: candidateId } });
       const event = await tx.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
       assertStructuralChangesAllowed(event.state);
