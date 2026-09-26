@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CalendarClock } from "lucide-react";
 import { prisma } from "@/lib/prisma/client";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
@@ -70,7 +70,13 @@ export default async function Home() {
             Open for voting
           </h2>
           {events.length === 0 ? (
-            <Reveal delayMs={280} className="rounded-2xl border border-dashed py-16 text-center">
+            <Reveal
+              delayMs={280}
+              className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center"
+            >
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarClock className="size-5" />
+              </div>
               <p className="text-base text-muted-foreground">Voting opens soon. Check back shortly.</p>
             </Reveal>
           ) : (
