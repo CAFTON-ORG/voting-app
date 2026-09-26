@@ -101,7 +101,7 @@ export function CandidatesGrid({
             className="max-w-xs"
           />
           <Select value={categoryFilter} onValueChange={updateCategoryFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -114,7 +114,7 @@ export function CandidatesGrid({
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={updateStatusFilter}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

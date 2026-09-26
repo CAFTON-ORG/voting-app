@@ -97,10 +97,14 @@ export function AuditLogTable({ data, actions }: { data: AuditRow[]; actions: st
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+    <DataTable
+      columns={columns}
+      data={filtered}
+      searchPlaceholder="Search audit log…"
+      emptyMessage="No audit entries yet."
+      actions={
         <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -112,13 +116,7 @@ export function AuditLogTable({ data, actions }: { data: AuditRow[]; actions: st
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchPlaceholder="Search audit log…"
-        emptyMessage="No audit entries yet."
-      />
-    </div>
+      }
+    />
   );
 }
