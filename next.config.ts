@@ -27,6 +27,25 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          // Clickjacking protection - this is a voting app, and a "Vote
+          // Now" button is exactly the kind of one-click sensitive action
+          // a UI-redressing attack (an invisible iframe of this site over
+          // a decoy page) targets. frame-ancestors is the modern
+          // equivalent; X-Frame-Options stays for older browsers that
+          // don't read CSP.
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
