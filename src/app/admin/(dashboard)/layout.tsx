@@ -35,15 +35,23 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
+        {/* SidebarHeader's own p-2 eats 16px of the collapsed rail's fixed
+            48px width (--sidebar-width-icon) before the button even gets
+            a turn - reduced to 4px a side when collapsed so a bigger icon
+            actually has room, instead of being forced to overflow (which
+            reads as "shoved off to one edge", not just clipped). */}
+        <SidebarHeader className="group-data-[collapsible=icon]:px-1">
           <SidebarMenu>
             <SidebarMenuItem>
               {/* size="lg" alone gives a 48px-tall row expanded and an
-                  exact 32px square collapsed (size-8!/p-0!) - overridden
-                  here to h-14/size-9! so a bigger 36px logo still has a
-                  couple px of breathing room in both states instead of
-                  exactly touching (or, sized any larger, clipping) the
-                  edges. The label text also needs an explicit
+                  exact 32px square collapsed (size-8!/p-0!). Overridden to
+                  h-16/size-10! (40px, exactly the width now available in
+                  the collapsed rail after the header-padding fix above) so
+                  a 36px logo centers with even clearance - justify-center
+                  is the actual fix for the centering itself, since a lone
+                  flex child otherwise sticks to the row's start edge, not
+                  its middle, regardless of how much extra box width there is.
+                  The label text also needs an explicit
                   group-data-[collapsible=icon]:hidden: this button's own
                   overflow-hidden clips it visually while the sidebar is
                   mid-collapse-animation, but does NOT stop it from being
@@ -53,7 +61,7 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
               <SidebarMenuButton
                 asChild
                 size="lg"
-                className="h-14 hover:bg-transparent active:bg-transparent group-data-[collapsible=icon]:size-9!"
+                className="h-16 justify-center hover:bg-transparent active:bg-transparent group-data-[collapsible=icon]:size-10!"
               >
                 <Link href="/admin">
                   <Logo size={36} className="shrink-0" />
