@@ -12,6 +12,7 @@ import { CandidatesGrid } from "@/components/admin/candidates-grid";
 import { CandidateFormSheet, type CandidateFormValues } from "@/components/admin/candidate-form-sheet";
 import { EmptyState } from "@/components/admin/empty-state";
 import type { CandidateCardData } from "@/components/admin/candidate-card";
+import { getPercentageColor } from "@/lib/format/progress-color";
 import { BarChart3, Users } from "lucide-react";
 
 type CategoryOption = { id: string; name: string };
@@ -25,18 +26,6 @@ type ResultCandidate = {
 };
 type ResultCategory = { id: string; name: string; totalVotes: number; candidates: ResultCandidate[] };
 type VoterRow = { email: string; fullName: string | null; votedAt: Date };
-
-// A distinct, cycling color per candidate row rather than one flat
-// bg-primary bar for everyone — makes a category's standings scannable
-// at a glance instead of reading as a wall of identical black bars.
-const PROGRESS_COLORS = [
-  "bg-blue-500 dark:bg-blue-400",
-  "bg-violet-500 dark:bg-violet-400",
-  "bg-amber-500 dark:bg-amber-400",
-  "bg-emerald-500 dark:bg-emerald-400",
-  "bg-rose-500 dark:bg-rose-400",
-  "bg-cyan-500 dark:bg-cyan-400",
-];
 
 function TabCount({ count }: { count: number }) {
   return (
@@ -159,7 +148,7 @@ export function EventWorkspaceTabs({
               <div key={category.id}>
                 <p className="text-sm font-medium">{category.name}</p>
                 <div className="mt-2 flex flex-col gap-3">
-                  {category.candidates.map((candidate, index) => (
+                  {category.candidates.map((candidate) => (
                     <div key={candidate.id} className="flex items-center gap-3">
                       <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-9 shrink-0" />
                       <div className="min-w-0 flex-1">
@@ -177,7 +166,7 @@ export function EventWorkspaceTabs({
                         <Progress
                           value={candidate.percentage}
                           className="mt-1.5 h-1.5"
-                          indicatorClassName={PROGRESS_COLORS[index % PROGRESS_COLORS.length]}
+                          indicatorClassName={getPercentageColor(candidate.percentage)}
                         />
                       </div>
                     </div>

@@ -9,6 +9,8 @@ import { EntityMetadata } from "@/components/admin/entity-metadata";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-edit-button";
 import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { getPercentageColor } from "@/lib/format/progress-color";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -24,6 +26,7 @@ export default async function CandidateDetailPage(
     include: { category: true, event: true, _count: { select: { selections: true } } },
   });
   if (!candidate) notFound();
+  if (await autoCloseIfExpired(candidate.event)) candidate.event.state = "CLOSED";
 
   const creatorIdentities = await getAdminIdentitiesByIds(
     candidate.createdById ? [candidate.createdById] : []
@@ -142,7 +145,7 @@ export default async function CandidateDetailPage(
                   <p className="text-xs text-muted-foreground">votes</p>
                   <p className="ml-auto text-sm font-medium tabular-nums">{votePercentage}%</p>
                 </div>
-                <Progress value={votePercentage} indicatorClassName="bg-blue-500 dark:bg-blue-400" />
+                <Progress value={votePercentage} indicatorClassName={getPercentageColor(votePercentage)} />
                 <p className="text-xs text-muted-foreground">
                   of {categoryTotalVotes} vote{categoryTotalVotes === 1 ? "" : "s"} cast in {candidate.category.name}
                 </p>
