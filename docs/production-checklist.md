@@ -85,6 +85,11 @@ Development, which can safely point at different values):
   as the fallback default (individual events also carry their own
   `allowedDomains`, which is the actual source of truth per event; this
   env var is only the fallback for contexts without an event yet).
+- `NEXT_PUBLIC_APP_URL` — set to `https://mmsit.cafton.com`. Without it,
+  admin-invite emails link back to whatever host the invite was actually
+  sent from, which is usually fine but means an invite sent from a preview
+  deployment or a local dev server links to that host instead of the real
+  domain.
 
 ## 6. Decide: same Supabase project, or a fresh one for production?
 

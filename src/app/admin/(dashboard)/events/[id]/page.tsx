@@ -113,6 +113,11 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
     name: c.name,
     description: c.description,
     candidateCount: c.candidates.length,
+    candidates: c.candidates.map((candidate) => ({
+      id: candidate.id,
+      fullName: candidate.fullName,
+      photoUrl: candidate.photoUrl,
+    })),
   }));
 
   return (
