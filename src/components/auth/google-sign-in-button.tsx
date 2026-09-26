@@ -28,7 +28,11 @@ export function GoogleSignInButton({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-        ...(hdDomain ? { queryParams: { hd: hdDomain } } : {}),
+        // Without this, Google silently re-authenticates with whichever
+        // account already has an active session in the browser, so there's
+        // no way to switch accounts from here — select_account forces
+        // Google's account chooser to show every time.
+        queryParams: { prompt: "select_account", ...(hdDomain ? { hd: hdDomain } : {}) },
       },
     });
     if (error) setLoading(false);
