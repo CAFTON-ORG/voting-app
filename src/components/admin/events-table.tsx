@@ -123,36 +123,36 @@ export function EventsTable({ data }: { data: EventRow[] }) {
   const archivedCount = data.filter((row) => row.archived).length;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {STATUS_OPTIONS.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status.charAt(0) + status.slice(1).toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {archivedCount > 0 && (
-          <div className="flex items-center gap-2">
-            <Label htmlFor="show-archived" className="text-sm text-muted-foreground">
-              Show archived ({archivedCount})
-            </Label>
-            <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-          </div>
-        )}
-      </div>
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchPlaceholder="Search events…"
-        emptyMessage="No events yet."
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={filtered}
+      searchPlaceholder="Search events…"
+      emptyMessage="No events yet."
+      actions={
+        <div className="flex items-center gap-3">
+          {archivedCount > 0 && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="show-archived" className="text-sm text-muted-foreground">
+                Show archived ({archivedCount})
+              </Label>
+              <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+            </div>
+          )}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {STATUS_OPTIONS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.charAt(0) + status.slice(1).toLowerCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      }
+    />
   );
 }
