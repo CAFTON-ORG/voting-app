@@ -18,6 +18,7 @@ export function ConfirmDialog({
   onOpenChange: onOpenChangeProp,
   title,
   description,
+  children,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   variant = "default",
@@ -28,6 +29,12 @@ export function ConfirmDialog({
   onOpenChange?: (open: boolean) => void;
   title: string;
   description: React.ReactNode;
+  /** Anything beyond plain description text — an input, a form, a nested
+   * <div> — must go here, not in `description`: Radix's DialogDescription
+   * renders a <p>, and a <div>/<form>/<textarea> nested inside a <p> is
+   * invalid HTML that causes a real hydration error (this is exactly what
+   * the reopen-voting reason field's Textarea was doing before). */
+  children?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "default" | "destructive";
@@ -60,6 +67,7 @@ export function ConfirmDialog({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
+          {children}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" disabled={isPending} onClick={() => setOpen(false)}>

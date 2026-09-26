@@ -16,7 +16,12 @@ export function VotingUnavailableState({
 }: {
   icon: LucideIcon;
   title: string;
-  description?: ReactNode;
+  // Plain string, deliberately not ReactNode: this renders inside a <p>,
+  // and block content (a <div>/<form>) nested in a <p> is invalid HTML
+  // that causes a hydration error — exactly the bug just fixed in
+  // AuthPageShell and ConfirmDialog. Use `children` below for anything
+  // richer than text.
+  description?: string;
   children?: ReactNode;
   footer?: ReactNode;
   signedInEmail?: string;
