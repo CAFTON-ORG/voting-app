@@ -20,7 +20,7 @@ export const PERMISSIONS = [
   "VIEW_FINAL_RESULTS", // per-candidate tallies after CLOSED/FINALIZED
   "EXPORT_RESULTS",
   "VIEW_AUDIT_LOG",
-  "VIEW_VOTER_LIST", // names/emails of who has voted — more sensitive than the aggregate count everyone sees; ADMIN only
+  "VIEW_VOTER_LIST", // names/emails of who has voted — more sensitive than the aggregate count everyone sees
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -45,13 +45,11 @@ const ROLE_PERMISSIONS: Record<AdminRole, readonly Permission[]> = {
     "VIEW_AUDIT_LOG",
     "VIEW_VOTER_LIST",
   ],
-  // Everything ADMIN can do operationally, except the three actions that
-  // are restricted for reasons other than "this is admin-user management"
-  // (REOPEN_VOTING and FINALIZE_RESULTS are irreversible-or-exceptional;
-  // VIEW_VOTER_LIST is more sensitive than the aggregate count everyone
-  // sees) — those stay ADMIN-only regardless of the role-hierarchy change
-  // below. MANAGE_ADMIN_USERS is granted, but canManageRole()/canInviteRole()
-  // cap what a MODERATOR can actually do with it to AUDITOR-level accounts.
+  // Everything ADMIN can do operationally, except the two actions that are
+  // irreversible or exceptional (REOPEN_VOTING, FINALIZE_RESULTS) — those
+  // stay ADMIN-only regardless of the role-hierarchy change below.
+  // MANAGE_ADMIN_USERS is granted, but canManageRole()/canInviteRole() cap
+  // what a MODERATOR can actually do with it to AUDITOR-level accounts.
   MODERATOR: [
     "MANAGE_EVENT_CONFIG",
     "OPEN_VOTING",
@@ -66,6 +64,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, readonly Permission[]> = {
     "VIEW_FINAL_RESULTS",
     "EXPORT_RESULTS",
     "VIEW_AUDIT_LOG",
+    "VIEW_VOTER_LIST",
   ],
   AUDITOR: ["VIEW_OPERATIONAL_DASHBOARD", "VIEW_FINAL_RESULTS", "EXPORT_RESULTS", "VIEW_AUDIT_LOG"],
 };
