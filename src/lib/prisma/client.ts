@@ -11,7 +11,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // DATABASE_URL already points at Supabase's pgbouncer transaction
+  // pooler, which does the real connection multiplexing — each serverless
+  // function instance still opens its own pg.Pool on top of that (default
+  // max: 10), and a burst of concurrent invocations can present far more
+  // connections to pgbouncer than it's configured to accept. A small max
+  // here is enough for one function instance's own concurrency, since
+  // pgbouncer is already sharing the real Postgres connections beneath it.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 3 });
   return new PrismaClient({ adapter });
 }
 

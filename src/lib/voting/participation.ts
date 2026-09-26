@@ -9,6 +9,12 @@ export type VoterParticipationRow = { email: string; fullName: string | null; vo
  * privacy design keeps impossible. auth.users isn't a Prisma model (it's
  * Supabase-managed), hence the raw join. Caller must have already
  * checked VIEW_VOTER_LIST — this function doesn't gate on its own. */
+// A safety cap, not a real page size — the admin table below paginates
+// client-side over whatever this returns. Without any bound, an event with
+// a very large electorate would ship its entire voter list to the browser
+// in one response on every page load.
+const MAX_VOTER_ROWS = 5000;
+
 export async function getVoterParticipations(eventId: string): Promise<VoterParticipationRow[]> {
   return prisma.$queryRaw<VoterParticipationRow[]>`
     select u.email as "email", u.raw_user_meta_data->>'full_name' as "fullName", vp.voted_at as "votedAt"
@@ -16,5 +22,6 @@ export async function getVoterParticipations(eventId: string): Promise<VoterPart
     join auth.users u on u.id = vp.voter_auth_user_id
     where vp.event_id = ${eventId}::uuid
     order by vp.voted_at asc
+    limit ${MAX_VOTER_ROWS}
   `;
 }

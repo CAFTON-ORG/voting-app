@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
-import { getBallotCount } from "@/lib/results/queries";
+import { getBallotCounts } from "@/lib/results/queries";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { PageTitle } from "@/components/admin/page-title";
 import { StatCards } from "@/components/admin/stat-cards";
@@ -23,32 +23,34 @@ export default async function AdminEventsPage() {
       if (await autoCloseIfExpired(event)) event.state = "CLOSED";
     })
   );
-  const ballotCounts = await Promise.all(events.map((event) => getBallotCount(event.id)));
+  const ballotCounts = await getBallotCounts(events.map((event) => event.id));
   const creatorIds = [...new Set(events.map((e) => e.createdById).filter((v): v is string => Boolean(v)))];
   const creatorIdentities = await getAdminIdentitiesByIds(creatorIds);
 
-  const rows: EventRow[] = events.map((event, index) => ({
-    id: event.id,
-    name: event.name,
-    state: event.state,
-    eligibilityMode: event.eligibilityMode,
-    votes: ballotCounts[index],
-    archived: Boolean(event.archivedAt),
-    createdByName:
-      event.createdById && creatorIdentities.has(event.createdById)
-        ? displayName(creatorIdentities.get(event.createdById)!)
-        : null,
-    canDelete:
-      can("MANAGE_EVENT_CONFIG") &&
-      ((event.state === "DRAFT" || event.state === "SCHEDULED") ||
-        (Boolean(event.archivedAt) && ballotCounts[index] === 0)),
-    canArchive:
-      can("MANAGE_EVENT_CONFIG") &&
-      (Boolean(event.archivedAt) || event.state === "CLOSED" || event.state === "FINALIZED"),
-  }));
+  const rows: EventRow[] = events.map((event) => {
+    const votes = ballotCounts.get(event.id) ?? 0;
+    return {
+      id: event.id,
+      name: event.name,
+      state: event.state,
+      eligibilityMode: event.eligibilityMode,
+      votes,
+      archived: Boolean(event.archivedAt),
+      createdByName:
+        event.createdById && creatorIdentities.has(event.createdById)
+          ? displayName(creatorIdentities.get(event.createdById)!)
+          : null,
+      canDelete:
+        can("MANAGE_EVENT_CONFIG") &&
+        ((event.state === "DRAFT" || event.state === "SCHEDULED") || (Boolean(event.archivedAt) && votes === 0)),
+      canArchive:
+        can("MANAGE_EVENT_CONFIG") &&
+        (Boolean(event.archivedAt) || event.state === "CLOSED" || event.state === "FINALIZED"),
+    };
+  });
 
   const activeEvents = events.filter((e) => !e.archivedAt);
-  const totalVotes = ballotCounts.reduce((sum, count) => sum + count, 0);
+  const totalVotes = [...ballotCounts.values()].reduce((sum, count) => sum + count, 0);
   const openEvents = activeEvents.filter((e) => e.state === "OPEN").length;
 
   return (

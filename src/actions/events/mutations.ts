@@ -214,6 +214,10 @@ export async function unarchiveEventAction(eventId: string): Promise<ActionResul
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
     await prisma.$transaction(async (tx) => {
+      const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
+      if (!event.archivedAt) {
+        throw new Error("This event isn't archived.");
+      }
       await tx.event.update({
         where: { id: eventId },
         data: { archivedAt: null, updatedById: admin.adminUserId },
