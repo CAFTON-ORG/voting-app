@@ -2,6 +2,7 @@ import { LayoutDashboard } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getBallotCount } from "@/lib/results/queries";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { PageTitle } from "@/components/admin/page-title";
@@ -17,6 +18,11 @@ export default async function AdminEventsPage() {
     prisma.event.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.adminUser.count({ where: { active: true } }),
   ]);
+  await Promise.all(
+    events.map(async (event) => {
+      if (await autoCloseIfExpired(event)) event.state = "CLOSED";
+    })
+  );
   const ballotCounts = await Promise.all(events.map((event) => getBallotCount(event.id)));
   const creatorIds = [...new Set(events.map((e) => e.createdById).filter((v): v is string => Boolean(v)))];
   const creatorIdentities = await getAdminIdentitiesByIds(creatorIds);

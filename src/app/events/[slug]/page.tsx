@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma/client";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getBallotCount } from "@/lib/results/queries";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
@@ -25,6 +26,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
     },
   });
   if (!event || event.state === "DRAFT") notFound();
+  if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   const ballotCount = event.showPublicBallotCount ? await getBallotCount(event.id) : null;
 

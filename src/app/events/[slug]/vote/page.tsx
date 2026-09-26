@@ -3,6 +3,7 @@ import { Clock, PauseCircle, CircleCheck, CircleSlash } from "lucide-react";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
+import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
@@ -15,6 +16,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
   const { slug } = await props.params;
   const event = await getVotableEvent(slug);
   if (!event) notFound();
+  if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   const identity = await getTrustedIdentity();
   if (!identity) {
