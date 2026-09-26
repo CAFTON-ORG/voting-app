@@ -88,7 +88,7 @@ export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandid
         <div
           ref={scrollerRef}
           onScroll={updateEdges}
-          className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-6 pb-2"
+          className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-6 pb-2 scroll-px-6"
         >
           {filtered.map((candidate) => (
             <div key={candidate.id} className="flex w-36 shrink-0 snap-start flex-col gap-3 sm:w-44">
