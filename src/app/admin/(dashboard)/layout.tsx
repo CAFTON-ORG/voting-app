@@ -2,9 +2,11 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { NavUser } from "@/components/admin/nav-user";
+import { NavUserPopover } from "@/components/admin/nav-user-popover";
 import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
 import { SidebarNav } from "@/components/admin/sidebar-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/shared/logo";
 import {
   SidebarProvider,
   Sidebar,
@@ -12,9 +14,11 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
@@ -23,8 +27,8 @@ import { Separator } from "@/components/ui/separator";
 export default async function AdminDashboardLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
 
-  const navItems = [
-    { href: "/admin", label: "Events" },
+  const workspaceItems = [{ href: "/admin", label: "Events" }];
+  const managementItems = [
     { href: "/admin/team", label: "Team" },
     ...(roleCan(admin.role, "VIEW_AUDIT_LOG") ? [{ href: "/admin/audit-log", label: "Audit Log" }] : []),
   ];
@@ -33,17 +37,37 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link href="/admin" className="flex items-center gap-2 px-2 py-1.5">
-            <span className="text-sm font-semibold tracking-tight">CAFTON</span>
-            <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-              Voting Admin
-            </span>
-          </Link>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              {/* size="lg" is what gives this the collapse-aware padding
+                  (group-data-[collapsible=icon]:p-0) that keeps the mark
+                  centered at icon width instead of the logo/text getting
+                  squeezed or clipped when the sidebar collapses. */}
+              <SidebarMenuButton asChild size="lg" className="hover:bg-transparent active:bg-transparent">
+                <Link href="/admin">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
+                    <Logo size={16} />
+                  </div>
+                  <div className="grid flex-1 text-left leading-tight">
+                    <span className="text-sm font-semibold tracking-tight">CAFTON</span>
+                    <span className="text-xs text-muted-foreground">Voting Admin</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
+            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarNav items={navItems} />
+              <SidebarNav items={workspaceItems} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarNav items={managementItems} />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -63,6 +87,8 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
             <AdminCommandMenu role={admin.role} />
           </div>
           <ThemeToggle />
+          <Separator orientation="vertical" className="h-4" />
+          <NavUserPopover email={admin.email} role={admin.role} />
         </header>
         <main className="flex-1 overflow-x-hidden p-6 sm:p-8 lg:p-10">{children}</main>
       </SidebarInset>
