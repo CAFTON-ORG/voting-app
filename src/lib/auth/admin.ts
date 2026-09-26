@@ -24,13 +24,14 @@ export async function requireUser() {
  * to succeed by trying to log in again — sending it back to /admin/login
  * is a dead-end loop. This is also a real security point, not just UX:
  * a UB student's own valid Google sign-in must never land them on an
- * admin login screen at all — they're routed to the public site instead. */
+ * admin login screen at all — /unauthorized explains why and links back
+ * to the public site instead. */
 export const requireAdmin = cache(async () => {
   const identity = await requireUser();
   const adminUser = await prisma.adminUser.findUnique({
     where: { authUserId: identity.authUserId },
   });
-  if (!adminUser || !adminUser.active) redirect("/");
+  if (!adminUser || !adminUser.active) redirect("/unauthorized");
   return { ...identity, adminUserId: adminUser.id, role: adminUser.role };
 });
 
