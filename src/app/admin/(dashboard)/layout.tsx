@@ -38,15 +38,26 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              {/* size="lg" gives this button a 48px-tall row when expanded
-                  (h-12, p-2 -> 32px of content height) and an exact 32px
-                  square when collapsed (size-8!, p-0! -> also 32px of
-                  content) - a 32px logo exactly fills both without ever
-                  clipping or overflowing the collapsed icon-only width. */}
-              <SidebarMenuButton asChild size="lg" className="hover:bg-transparent active:bg-transparent">
+              {/* size="lg" alone gives a 48px-tall row expanded and an
+                  exact 32px square collapsed (size-8!/p-0!) - overridden
+                  here to h-14/size-9! so a bigger 36px logo still has a
+                  couple px of breathing room in both states instead of
+                  exactly touching (or, sized any larger, clipping) the
+                  edges. The label text also needs an explicit
+                  group-data-[collapsible=icon]:hidden: this button's own
+                  overflow-hidden clips it visually while the sidebar is
+                  mid-collapse-animation, but does NOT stop it from being
+                  in the layout (and visible) once fully collapsed, since
+                  a flex child's text doesn't shrink below its own content
+                  width by default - it has to be told to disappear. */}
+              <SidebarMenuButton
+                asChild
+                size="lg"
+                className="h-14 hover:bg-transparent active:bg-transparent group-data-[collapsible=icon]:size-9!"
+              >
                 <Link href="/admin">
-                  <Logo size={32} className="shrink-0" />
-                  <div className="grid flex-1 text-left leading-tight">
+                  <Logo size={36} className="shrink-0" />
+                  <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="text-sm font-semibold tracking-tight">CAFTON</span>
                     <span className="text-xs text-muted-foreground">Voting Admin</span>
                   </div>
