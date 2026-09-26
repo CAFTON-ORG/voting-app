@@ -1,21 +1,71 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ClockIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "cn";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** Calendar picks the date; hour/minute Select dropdowns supply the
- * time-of-day — kept as shadcn components throughout rather than a
- * native <input type="time">, which renders as an unstyled OS widget
- * that breaks the rest of the app's look. */
+// A defensive guard, not just a type check: `value` is a plain Date built
+// up from user interaction (calendar pick + time pick, merged via
+// setHours), and an "Invalid Date" (e.g. from a stray NaN slipping into
+// setHours) still passes `instanceof Date` — its own toLocaleDateString()
+// literally renders the string "Invalid Date" into the button, which is
+// exactly the kind of input error this guards against everywhere `value`
+// is read below, rather than trusting it's always well-formed.
+function isValidDate(d: Date | undefined): d is Date {
+  return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+function startOfDay(d: Date): Date {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// 15-minute increments is the standard step for this kind of scheduling
+// picker (matches Google Calendar/most booking UIs) - fine-grained enough
+// for a voting window's open/close time, without a 96-option list turning
+// into two full 24/60 dropdowns' worth of scrolling.
+const TIME_STEP_MINUTES = 15;
+const TIME_OPTIONS = Array.from({ length: (24 * 60) / TIME_STEP_MINUTES }, (_, i) => {
+  const totalMinutes = i * TIME_STEP_MINUTES;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const period = hours < 12 ? "AM" : "PM";
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  return { value: `${pad(hours)}:${pad(minutes)}`, label: `${displayHour}:${pad(minutes)} ${period}`, totalMinutes };
+});
+const LAST_SLOT_MINUTES = TIME_OPTIONS[TIME_OPTIONS.length - 1].totalMinutes;
+
+/** The next 15-minute slot strictly after `now` - e.g. 2:07 -> 2:15, and
+ * exactly 2:15:00.000 -> 2:30 (never "now" itself, since by the time the
+ * form is actually submitted a moment later, that instant has already
+ * passed too). Clamped to the day's last slot if `now` is past it. */
+function nextAvailableTime(now: Date): { hours: number; minutes: number } {
+  const minutes = Math.min(
+    Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / TIME_STEP_MINUTES) * TIME_STEP_MINUTES,
+    LAST_SLOT_MINUTES
+  );
+  return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
+}
+
+/** Calendar picks the date; a searchable time combobox (15-minute steps)
+ * supplies the time-of-day — a plain Select with 96 options renders every
+ * one of them into the page at once, which is what was pushing the
+ * dropdown to the full height of the screen. The standard fix for a long
+ * option list like this is a searchable combobox (Popover + Command,
+ * shadcn's own recipe for exactly this case) instead of a longer native
+ * Select: CommandList caps itself at a fixed scrollable height regardless
+ * of item count, and typing narrows it (e.g. "2:00" or "pm"). */
 export function DateTimePicker({
   value,
   onChange,
@@ -27,89 +77,130 @@ export function DateTimePicker({
   placeholder?: string;
   invalid?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+
+  const validValue = isValidDate(value) ? value : undefined;
 
   function handleDateSelect(date: Date | undefined) {
-    if (!date) {
+    if (!date || Number.isNaN(date.getTime())) {
       onChange(undefined);
       return;
     }
     const merged = new Date(date);
-    if (value) {
-      merged.setHours(value.getHours(), value.getMinutes());
+    if (validValue) {
+      merged.setHours(validValue.getHours(), validValue.getMinutes());
+    } else if (isSameCalendarDay(date, new Date())) {
+      // No time picked yet, and the chosen day is today - defaulting to
+      // midnight (00:00) here would silently produce a time already in
+      // the past for today (today is, by definition, already past its
+      // own midnight), exactly the kind of past-time value the picker
+      // otherwise disables picking directly. Snap to the next available
+      // 15-minute slot instead. A future date has no such problem, so it
+      // keeps the plain midnight default.
+      const { hours, minutes } = nextAvailableTime(new Date());
+      merged.setHours(hours, minutes, 0, 0);
     }
     onChange(merged);
   }
 
-  function handleHourChange(hourStr: string) {
-    const merged = new Date(value ?? new Date());
-    merged.setHours(Number(hourStr));
+  function handleTimeChange(timeStr: string) {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    // TIME_OPTIONS only ever produces well-formed "HH:mm" strings, but
+    // guard anyway rather than trust a string handed to a public function
+    // - a malformed value here would otherwise silently produce an
+    // Invalid Date that renders as the literal text "Invalid Date".
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return;
+    }
+    const merged = new Date(validValue ?? new Date());
+    merged.setHours(hours, minutes, 0, 0);
     onChange(merged);
   }
 
-  function handleMinuteChange(minuteStr: string) {
-    const merged = new Date(value ?? new Date());
-    merged.setMinutes(Number(minuteStr));
-    onChange(merged);
-  }
+  const currentTimeValue = validValue ? `${pad(validValue.getHours())}:${pad(validValue.getMinutes())}` : null;
+  const currentTimeLabel = TIME_OPTIONS.find((t) => t.value === currentTimeValue)?.label;
+
+  // Scheduling something to start in the past isn't a valid state for this
+  // app (voting can't have "opened" yesterday) - the standard pattern for
+  // this kind of picker is to disable past days on the calendar outright,
+  // and for today specifically, disable the time slots that have already
+  // passed rather than leaving them pickable and only failing at submit.
+  const now = new Date();
+  const isTodaySelected = validValue ? isSameCalendarDay(validValue, now) : false;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={dateOpen} onOpenChange={setDateOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
             className={cn(
               "min-w-0 flex-1 basis-40 justify-start overflow-hidden text-left font-normal",
-              !value && "text-muted-foreground",
+              !validValue && "text-muted-foreground",
               invalid && "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40"
             )}
           >
             <CalendarIcon className="size-4 shrink-0" />
-            <span className="truncate">{value ? value.toLocaleDateString() : placeholder}</span>
+            <span className="truncate">{validValue ? validValue.toLocaleDateString() : placeholder}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={value}
+            selected={validValue}
+            disabled={(date) => date < startOfDay(now)}
             onSelect={(date) => {
               handleDateSelect(date);
-              setOpen(false);
+              setDateOpen(false);
             }}
           />
         </PopoverContent>
       </Popover>
-      <Select value={value ? pad(value.getHours()) : undefined} onValueChange={handleHourChange} disabled={!value}>
-        <SelectTrigger className="w-18" aria-label="Hour">
-          <SelectValue placeholder="HH" />
-        </SelectTrigger>
-        <SelectContent className="max-h-60">
-          {HOURS.map((h) => (
-            <SelectItem key={h} value={pad(h)}>
-              {pad(h)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <span className="flex items-center text-muted-foreground">:</span>
-      <Select
-        value={value ? pad(value.getMinutes()) : undefined}
-        onValueChange={handleMinuteChange}
-        disabled={!value}
-      >
-        <SelectTrigger className="w-18" aria-label="Minute">
-          <SelectValue placeholder="MM" />
-        </SelectTrigger>
-        <SelectContent className="max-h-60">
-          {MINUTES.map((m) => (
-            <SelectItem key={m} value={pad(m)}>
-              {pad(m)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={timeOpen} onOpenChange={setTimeOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!validValue}
+            aria-label="Time"
+            className={cn(
+              "w-28 justify-start overflow-hidden text-left font-normal",
+              !currentTimeLabel && "text-muted-foreground",
+              invalid && "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40"
+            )}
+          >
+            <ClockIcon className="size-4 shrink-0" />
+            <span className="truncate">{currentTimeLabel ?? "Time"}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-40 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search time…" />
+            <CommandList>
+              <CommandEmpty>No matching time.</CommandEmpty>
+              <CommandGroup>
+                {TIME_OPTIONS.map((t) => (
+                  <CommandItem
+                    key={t.value}
+                    value={t.label}
+                    disabled={isTodaySelected && t.totalMinutes < nowMinutes}
+                    data-checked={t.value === currentTimeValue}
+                    onSelect={() => {
+                      handleTimeChange(t.value);
+                      setTimeOpen(false);
+                    }}
+                  >
+                    {t.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

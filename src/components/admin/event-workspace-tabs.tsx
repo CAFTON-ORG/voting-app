@@ -16,7 +16,7 @@ import type { CandidateCardData } from "@/components/admin/candidate-card";
 import { getPercentageColor } from "@/lib/format/progress-color";
 import { BarChart3, Users } from "lucide-react";
 
-type CategoryOption = { id: string; name: string };
+type CategoryOption = { id: string; name: string; candidateCount: number };
 type ResultCandidate = {
   id: string;
   candidateNumber: number;
@@ -100,7 +100,11 @@ export function EventWorkspaceTabs({
   const [presetCategoryId, setPresetCategoryId] = useState<string | undefined>();
   const [categoryJump, setCategoryJump] = useState<{ categoryName: string; token: number } | undefined>();
 
-  const categoryOptions: CategoryOption[] = categories.map((c) => ({ id: c.id, name: c.name }));
+  const categoryOptions: CategoryOption[] = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    candidateCount: c.candidateCount,
+  }));
 
   function openCreate(categoryId?: string) {
     setEditing(undefined);

@@ -29,6 +29,7 @@ export async function createEventAction(input: unknown): Promise<ActionResult<{ 
           slug,
           name: data.name,
           allowedDomains: data.allowedDomains,
+          showPublicBallotCount: data.showPublicBallotCount,
           eligibilityMode: "DOMAIN_ONLY",
           state: "DRAFT",
           createdById: admin.adminUserId,

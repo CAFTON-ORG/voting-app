@@ -151,11 +151,15 @@ export function MembersTable({ data, viewerRole }: { data: MemberRow[]; viewerRo
                     onClick={async () => {
                       const result = await resendInvitationAction(member.id);
                       if (result.ok) {
-                        toast.success(
-                          result.data.emailSent
-                            ? "Invitation extended and re-sent"
-                            : "Invitation extended, but the email couldn't be sent"
-                        );
+                        if (result.data.emailSent) {
+                          toast.success("Invitation extended and re-sent");
+                        } else {
+                          toast.warning(
+                            result.data.emailError
+                              ? `Invitation extended, but the email couldn't be sent: ${result.data.emailError}`
+                              : "Invitation extended, but the email couldn't be sent"
+                          );
+                        }
                         router.refresh();
                       } else {
                         toast.error(result.message);

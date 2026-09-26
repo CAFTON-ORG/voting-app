@@ -38,15 +38,14 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              {/* size="lg" is what gives this the collapse-aware padding
-                  (group-data-[collapsible=icon]:p-0) that keeps the mark
-                  centered at icon width instead of the logo/text getting
-                  squeezed or clipped when the sidebar collapses. */}
+              {/* size="lg" gives this button a 48px-tall row when expanded
+                  (h-12, p-2 -> 32px of content height) and an exact 32px
+                  square when collapsed (size-8!, p-0! -> also 32px of
+                  content) - a 32px logo exactly fills both without ever
+                  clipping or overflowing the collapsed icon-only width. */}
               <SidebarMenuButton asChild size="lg" className="hover:bg-transparent active:bg-transparent">
                 <Link href="/admin">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
-                    <Logo size={16} />
-                  </div>
+                  <Logo size={32} className="shrink-0" />
                   <div className="grid flex-1 text-left leading-tight">
                     <span className="text-sm font-semibold tracking-tight">CAFTON</span>
                     <span className="text-xs text-muted-foreground">Voting Admin</span>

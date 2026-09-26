@@ -19,8 +19,8 @@ export function PartnerLogos({ className }: { className?: string }) {
         rel="noopener noreferrer"
         className="flex flex-col items-center gap-1.5 transition-opacity hover:opacity-80"
       >
-        <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
-          <Logo size={20} />
+        <div className="flex size-11 items-center justify-center">
+          <Logo size={32} />
         </div>
         <span className="text-[10px] font-medium text-muted-foreground">CAFTON</span>
       </a>

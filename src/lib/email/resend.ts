@@ -32,6 +32,15 @@ export async function sendAdminInviteEmail({
   const { subject, html, text } = renderAdminInviteEmail({ inviterName, role, acceptUrl });
   const { error } = await resend.emails.send({ from: RESEND_FROM_EMAIL, to, subject, html, text });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // Resend's own error message is genuinely useful here (e.g. the
+    // shared onboarding@resend.dev sender can only send to the Resend
+    // account's own address until a real domain is verified) - logged
+    // server-side and surfaced up to the admin who triggered the invite,
+    // rather than only ever showing a generic "couldn't be sent" toast
+    // with no way to tell why.
+    console.error("[resend] admin invite email failed:", error);
+    return { ok: false, error: error.message };
+  }
   return { ok: true };
 }

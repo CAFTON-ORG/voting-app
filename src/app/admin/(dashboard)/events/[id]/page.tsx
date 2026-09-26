@@ -172,12 +172,18 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
         <div className="flex flex-col gap-6 lg:col-span-4">
           {!readiness.isReady && event.state !== "FINALIZED" && <EventReadinessCard items={readiness.items} />}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Schedule</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {event.votingOpensAt && event.votingClosesAt ? (
+          {/* Before a schedule exists, the "Not scheduled yet" card was
+              just dead weight above the very form that sets it - hidden
+              until there's an actual schedule to show, and the form
+              itself takes the prominent first slot instead. */}
+          {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
+
+          {event.votingOpensAt && event.votingClosesAt && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Schedule</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-700 dark:bg-green-950/60 dark:text-green-300">
@@ -232,11 +238,9 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     </div>
                   )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Not scheduled yet.</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {(createdByName || updatedByName) && (
             <Card>
@@ -256,8 +260,6 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
               </CardContent>
             </Card>
           )}
-
-          {event.state === "DRAFT" && can("MANAGE_EVENT_CONFIG") && <ScheduleEventForm eventId={event.id} />}
 
           <EventStateActions
             eventId={event.id}

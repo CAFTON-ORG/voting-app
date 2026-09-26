@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CalendarClock } from "lucide-react";
 import { prisma } from "@/lib/prisma/client";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
@@ -8,6 +8,7 @@ import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { LogoScene } from "@/components/shared/logo-scene";
 import { Reveal } from "@/components/shared/reveal";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
 import { CAFTON_WEBSITE_URL } from "@/lib/site";
 
 // Lists live events — without this, Next prerenders the query result at
@@ -17,7 +18,17 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [events, identity] = await Promise.all([
-    prisma.event.findMany({ where: { state: "OPEN" }, orderBy: { createdAt: "desc" } }),
+    prisma.event.findMany({
+      where: { state: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        candidates: {
+          where: { isActive: true },
+          orderBy: { displayOrder: "asc" },
+          select: { id: true, fullName: true, photoUrl: true },
+        },
+      },
+    }),
     getTrustedIdentity(),
   ]);
 
@@ -70,8 +81,17 @@ export default async function Home() {
             Open for voting
           </h2>
           {events.length === 0 ? (
-            <Reveal delayMs={280} className="rounded-2xl border border-dashed py-16 text-center">
-              <p className="text-base text-muted-foreground">Voting opens soon. Check back shortly.</p>
+            <Reveal
+              delayMs={280}
+              className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center"
+            >
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarClock className="size-5" />
+              </div>
+              <div>
+                <p className="text-base font-medium">Voting opens soon.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Check back shortly.</p>
+              </div>
             </Reveal>
           ) : (
             <div className="flex flex-col gap-4">
@@ -83,8 +103,9 @@ export default async function Home() {
                   >
                     <div className="min-w-0">
                       <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
                         <VotingStatusBadge state={event.state} />
+                        <CandidateAvatarStack candidates={event.candidates} />
                       </div>
                     </div>
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">

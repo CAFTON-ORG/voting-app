@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { DomainsInput } from "@/components/admin/domains-input";
 import {
   Dialog,
@@ -38,7 +39,7 @@ export function CreateEventDialog() {
   const form = useForm<FormValues>({
     resolver: zodResolver(createEventSchema),
     mode: "onChange",
-    defaultValues: { name: "", allowedDomains: [] },
+    defaultValues: { name: "", allowedDomains: [], showPublicBallotCount: true },
   });
 
   async function onSubmit(values: FormValues) {
@@ -104,6 +105,18 @@ export function CreateEventDialog() {
                     </FormControl>
                     <FormDescription>Type a domain and press Enter — no leading &quot;@&quot;.</FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="showPublicBallotCount"
+                render={({ field }) => (
+                  <FormItem className="flex-row items-center justify-between">
+                    <FormLabel>Show public ballot count</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

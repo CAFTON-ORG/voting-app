@@ -21,7 +21,7 @@ import {
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
-import { CandidateAvatarStack } from "@/components/admin/candidate-avatar-stack";
+import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
 import {
   createCategoryAction,
   updateCategoryAction,
@@ -165,8 +165,17 @@ export function CategoryManager({
                 <div className="flex items-center gap-1">
                   {onViewCandidates && (
                     <Button variant="ghost" size="sm" onClick={() => onViewCandidates(category.id)}>
-                      <ListChecks className="size-3.5" />
-                      View candidates
+                      {category.candidateCount === 0 ? (
+                        <>
+                          <Plus className="size-3.5" />
+                          Add candidates
+                        </>
+                      ) : (
+                        <>
+                          <ListChecks className="size-3.5" />
+                          View candidates
+                        </>
+                      )}
                     </Button>
                   )}
                   {canManageFull && (
