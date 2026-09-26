@@ -23,6 +23,7 @@ export type EventRow = {
   votes: number;
   archived: boolean;
   createdByName: string | null;
+  createdByAvatarUrl: string | null;
   canDelete: boolean;
   canArchive: boolean;
 };
@@ -68,7 +69,7 @@ const columns: ColumnDef<EventRow>[] = [
     cell: ({ row }) =>
       row.original.createdByName ? (
         <div className="flex items-center gap-2">
-          <UserAvatar label={row.original.createdByName} size="sm" />
+          <UserAvatar label={row.original.createdByName} imageUrl={row.original.createdByAvatarUrl} size="sm" />
           <span className="text-sm text-muted-foreground">{row.original.createdByName}</span>
         </div>
       ) : (

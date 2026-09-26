@@ -2,14 +2,18 @@ import { UserAvatar } from "@/components/admin/user-avatar";
 
 export function EntityMetadata({
   createdByName,
+  createdByAvatarUrl,
   createdAt,
   updatedByName,
+  updatedByAvatarUrl,
   updatedAt,
   withAvatar = false,
 }: {
   createdByName?: string | null;
+  createdByAvatarUrl?: string | null;
   createdAt?: Date | null;
   updatedByName?: string | null;
+  updatedByAvatarUrl?: string | null;
   updatedAt?: Date | null;
   /** Shows a small avatar next to each line — off by default since most
    * callers already show an avatar for the entity itself nearby (e.g. the
@@ -27,7 +31,7 @@ export function EntityMetadata({
     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
       {createdByName && createdAt && (
         <div className="flex items-center gap-2">
-          {withAvatar && <UserAvatar label={createdByName} size="sm" />}
+          {withAvatar && <UserAvatar label={createdByName} imageUrl={createdByAvatarUrl} size="sm" />}
           <p>
             Created by {createdByName} · {createdAt.toLocaleString()}
           </p>
@@ -35,7 +39,7 @@ export function EntityMetadata({
       )}
       {showUpdated && (
         <div className="flex items-center gap-2">
-          {withAvatar && <UserAvatar label={updatedByName} size="sm" />}
+          {withAvatar && <UserAvatar label={updatedByName} imageUrl={updatedByAvatarUrl} size="sm" />}
           <p>
             Last edited by {updatedByName} · {updatedAt.toLocaleString()}
           </p>

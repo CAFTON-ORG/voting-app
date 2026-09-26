@@ -12,6 +12,7 @@ export type AuditRow = {
   action: string;
   eventName: string;
   actorName: string | null;
+  actorAvatarUrl: string | null;
   actorRole: string;
   metadata: Record<string, unknown>;
   createdAt: Date;
@@ -47,7 +48,7 @@ const columns: ColumnDef<AuditRow>[] = [
     cell: ({ row }) =>
       row.original.actorName ? (
         <div className="flex items-center gap-2">
-          <UserAvatar label={row.original.actorName} size="sm" />
+          <UserAvatar label={row.original.actorName} imageUrl={row.original.actorAvatarUrl} size="sm" />
           <div>
             <p className="text-sm">{row.original.actorName}</p>
             <p className="text-xs text-muted-foreground">{row.original.actorRole}</p>

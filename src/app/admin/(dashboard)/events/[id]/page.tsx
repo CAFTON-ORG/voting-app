@@ -80,6 +80,14 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
     event.updatedById && adminIdentities.has(event.updatedById)
       ? displayName(adminIdentities.get(event.updatedById)!)
       : null;
+  const createdByAvatarUrl =
+    event.createdById && adminIdentities.has(event.createdById)
+      ? (adminIdentities.get(event.createdById)!.avatarUrl ?? null)
+      : null;
+  const updatedByAvatarUrl =
+    event.updatedById && adminIdentities.has(event.updatedById)
+      ? (adminIdentities.get(event.updatedById)!.avatarUrl ?? null)
+      : null;
 
   const elapsedPercent =
     votingEverActive && event.votingOpensAt && event.votingClosesAt
@@ -233,8 +241,10 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
               <CardContent>
                 <EntityMetadata
                   createdByName={createdByName}
+                  createdByAvatarUrl={createdByAvatarUrl}
                   createdAt={event.createdAt}
                   updatedByName={updatedByName}
+                  updatedByAvatarUrl={updatedByAvatarUrl}
                   updatedAt={event.updatedAt}
                   withAvatar
                 />

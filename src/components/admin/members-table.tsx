@@ -24,6 +24,7 @@ export type MemberRow = {
   id: string;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
   role: AdminRole;
   status: "ACTIVE" | "PENDING" | "EXPIRED";
   kind: "member" | "invitation";
@@ -50,7 +51,7 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
         const label = row.original.fullName || row.original.email;
         return (
           <div className="flex items-center gap-2">
-            <UserAvatar label={label} size="sm" />
+            <UserAvatar label={label} imageUrl={row.original.avatarUrl} size="sm" />
             <div>
               <p className="text-sm">{label}</p>
               {row.original.fullName && (

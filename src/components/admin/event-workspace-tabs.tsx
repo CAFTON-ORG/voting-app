@@ -26,7 +26,7 @@ type ResultCandidate = {
   percentage: number;
 };
 type ResultCategory = { id: string; name: string; totalVotes: number; candidates: ResultCandidate[] };
-type VoterRow = { email: string; fullName: string | null; votedAt: Date };
+type VoterRow = { email: string; fullName: string | null; avatarUrl: string | null; votedAt: Date };
 type VoterTableRow = VoterRow & { id: string };
 
 // Paginated via DataTable rather than rendered as one flat .map() — an
@@ -43,7 +43,7 @@ const voterColumns: ColumnDef<VoterTableRow>[] = [
       const label = row.original.fullName || row.original.email;
       return (
         <div className="flex items-center gap-2">
-          <UserAvatar label={label} size="sm" />
+          <UserAvatar label={label} imageUrl={row.original.avatarUrl} size="sm" />
           <div>
             <p className="text-sm">{label}</p>
             {row.original.fullName && <p className="text-xs text-muted-foreground">{row.original.email}</p>}
