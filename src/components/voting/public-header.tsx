@@ -7,13 +7,21 @@ import { NavUserPopover } from "@/components/voting/nav-user-popover";
  * (cafton-landing) uses for its navbar — stays visible while the voter
  * scrolls through a long candidate list instead of scrolling away.
  *
- * Deliberately takes signedInEmail as a prop rather than calling
- * getTrustedIdentity() itself — this component is imported by both plain
- * Server Components and BallotForm, a Client Component, and a "use client"
- * module can never import a component that reaches into server-only code
- * (see src/lib/auth/identity.ts's "server-only" guard). Each caller that
- * already knows the signed-in identity passes it down instead. */
-export function PublicHeader({ signedInEmail }: { signedInEmail?: string }) {
+ * Deliberately takes the signed-in identity as flat props rather than
+ * calling getTrustedIdentity() itself — this component is imported by both
+ * plain Server Components and BallotForm, a Client Component, and a "use
+ * client" module can never import a component that reaches into
+ * server-only code (see src/lib/auth/identity.ts's "server-only" guard).
+ * Each caller that already knows the signed-in identity passes it down. */
+export function PublicHeader({
+  signedInEmail,
+  signedInName,
+  signedInAvatarUrl,
+}: {
+  signedInEmail?: string;
+  signedInName?: string | null;
+  signedInAvatarUrl?: string | null;
+}) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-2 px-6">
@@ -23,7 +31,9 @@ export function PublicHeader({ signedInEmail }: { signedInEmail?: string }) {
         </Link>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          {signedInEmail && <NavUserPopover email={signedInEmail} />}
+          {signedInEmail && (
+            <NavUserPopover email={signedInEmail} fullName={signedInName} avatarUrl={signedInAvatarUrl} />
+          )}
         </div>
       </div>
     </header>

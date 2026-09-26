@@ -23,7 +23,11 @@ export default async function Home() {
   return (
     <div className="relative flex min-h-svh flex-col">
       <AuroraGlow />
-      <PublicHeader signedInEmail={identity?.email} />
+      <PublicHeader
+        signedInEmail={identity?.email}
+        signedInName={identity?.fullName}
+        signedInAvatarUrl={identity?.avatarUrl}
+      />
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6">
         <section className="flex flex-col items-center gap-6 pt-20 pb-16 text-center sm:pt-28">

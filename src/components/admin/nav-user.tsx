@@ -22,17 +22,28 @@ import type { AdminRole } from "@prisma/client";
  * fires as the menu is already closing, so it can't itself submit a form
  * synchronously — driving a hidden form via requestSubmit() sidesteps
  * that instead of fighting it. */
-export function NavUser({ email, role }: { email: string; role: AdminRole }) {
+export function NavUser({
+  email,
+  fullName,
+  avatarUrl,
+  role,
+}: {
+  email: string;
+  fullName?: string | null;
+  avatarUrl?: string | null;
+  role: AdminRole;
+}) {
   const { isMobile } = useSidebar();
+  const label = fullName || email;
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-            <UserAvatar label={email} size="sm" />
+            <UserAvatar label={email} imageUrl={avatarUrl} size="sm" />
             <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-medium">{email}</span>
+              <span className="truncate font-medium">{label}</span>
               <span className="truncate text-xs text-muted-foreground">{role}</span>
             </div>
             <EllipsisVertical className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
@@ -47,9 +58,10 @@ export function NavUser({ email, role }: { email: string; role: AdminRole }) {
           <DropdownMenuGroup>
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <UserAvatar label={email} size="sm" />
+                <UserAvatar label={email} imageUrl={avatarUrl} size="sm" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{email}</span>
+                  <span className="truncate font-medium">{label}</span>
+                  {fullName && <span className="truncate text-xs text-muted-foreground">{email}</span>}
                   <Badge variant="secondary" className="mt-1 w-fit text-[10px]">
                     {role}
                   </Badge>

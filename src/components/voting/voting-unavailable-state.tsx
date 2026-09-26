@@ -13,6 +13,8 @@ export function VotingUnavailableState({
   children,
   footer,
   signedInEmail,
+  signedInName,
+  signedInAvatarUrl,
 }: {
   icon: LucideIcon;
   title: string;
@@ -25,10 +27,16 @@ export function VotingUnavailableState({
   children?: ReactNode;
   footer?: ReactNode;
   signedInEmail?: string;
+  signedInName?: string | null;
+  signedInAvatarUrl?: string | null;
 }) {
   return (
     <div className="flex min-h-svh flex-col">
-      <PublicHeader signedInEmail={signedInEmail} />
+      <PublicHeader
+        signedInEmail={signedInEmail}
+        signedInName={signedInName}
+        signedInAvatarUrl={signedInAvatarUrl}
+      />
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <Icon className="size-10 text-muted-foreground" />
         <h1 className="font-heading text-xl font-semibold text-balance">{title}</h1>

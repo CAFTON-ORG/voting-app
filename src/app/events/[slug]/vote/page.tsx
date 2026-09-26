@@ -56,6 +56,8 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         }
         footer={signedInFooter}
         signedInEmail={identity.email}
+        signedInName={identity.fullName}
+        signedInAvatarUrl={identity.avatarUrl}
       >
         {event.votingOpensAt && <VotingCountdown target={event.votingOpensAt} label="Starts in" />}
       </VotingUnavailableState>
@@ -70,6 +72,8 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         description="Please check back shortly."
         footer={signedInFooter}
         signedInEmail={identity.email}
+        signedInName={identity.fullName}
+        signedInAvatarUrl={identity.avatarUrl}
       />
     );
   }
@@ -86,6 +90,8 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         }
         footer={signedInFooter}
         signedInEmail={identity.email}
+        signedInName={identity.fullName}
+        signedInAvatarUrl={identity.avatarUrl}
       />
     );
   }
@@ -99,9 +105,18 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         description="Your vote for this event has already been recorded. Thank you for participating."
         footer={signedInFooter}
         signedInEmail={identity.email}
+        signedInName={identity.fullName}
+        signedInAvatarUrl={identity.avatarUrl}
       />
     );
   }
 
-  return <BallotForm event={event} signedInEmail={identity.email} voterName={identity.fullName} />;
+  return (
+    <BallotForm
+      event={event}
+      signedInEmail={identity.email}
+      voterName={identity.fullName}
+      voterAvatarUrl={identity.avatarUrl}
+    />
+  );
 }

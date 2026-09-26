@@ -47,10 +47,12 @@ export function BallotForm({
   event,
   signedInEmail,
   voterName,
+  voterAvatarUrl,
 }: {
   event: EventWithBallot;
   signedInEmail: string;
   voterName?: string | null;
+  voterAvatarUrl?: string | null;
 }) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [step, setStep] = useState<Step>("welcome");
@@ -110,7 +112,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-16">
           <div className="text-center">
             <Badge
@@ -210,7 +212,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
           <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
@@ -242,7 +244,7 @@ export function BallotForm({
   if (step === "review") {
     return (
       <div className="flex min-h-svh flex-col">
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
@@ -325,7 +327,7 @@ export function BallotForm({
 
   return (
     <div className="flex min-h-svh flex-col">
-      <PublicHeader signedInEmail={signedInEmail} />
+      <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
         <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.select} />
         <h1 className="font-heading mt-8 text-xl font-semibold">{event.name}</h1>

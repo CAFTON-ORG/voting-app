@@ -48,7 +48,11 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   return (
     <div className="relative flex min-h-svh flex-col">
       <AuroraGlow />
-      <PublicHeader signedInEmail={identity?.email} />
+      <PublicHeader
+        signedInEmail={identity?.email}
+        signedInName={identity?.fullName}
+        signedInAvatarUrl={identity?.avatarUrl}
+      />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 pb-16">
         <Reveal>
           <EventHero

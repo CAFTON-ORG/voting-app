@@ -1,13 +1,12 @@
-import { Building2, Landmark } from "lucide-react";
+import Image from "next/image";
 import { Logo } from "@/components/shared/logo";
 import { cn } from "cn";
 
-/** The three-mark partnership strip (Cafton, SIT, SIT-SB) used anywhere the
+/** The three-mark partnership strip (Cafton, SIT, SIT-SAC) used anywhere the
  * platform needs to show who stands behind it — the public footer, the
- * auth/login shell, and anywhere else branding is expected. Only CAFTON has
- * a real mark right now; SIT and SIT-SB are dashed placeholder slots so
- * swapping in real logo images later is a one-line change, not a layout
- * change (see PublicFooter's original single-slot version this replaces). */
+ * auth/login shell, and anywhere else branding is expected. Real logo files
+ * live in public/logos/; only Cafton's is an inline SVG component (it's a
+ * simple vector wordmark already, not something that needs a raster file). */
 export function PartnerLogos({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center justify-center gap-4", className)}>
@@ -21,11 +20,8 @@ export function PartnerLogos({ className }: { className?: string }) {
       <div className="h-8 w-px bg-border" aria-hidden="true" />
 
       <div className="flex flex-col items-center gap-1.5">
-        <div
-          className="flex size-11 items-center justify-center rounded-xl border border-dashed text-muted-foreground"
-          title="School of Information Technology logo placeholder"
-        >
-          <Landmark className="size-5" />
+        <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl bg-white">
+          <Image src="/logos/sit-logo.png" alt="School of Information Technology" fill sizes="2.75rem" className="object-contain p-1" />
         </div>
         <span className="text-[10px] font-medium text-muted-foreground">SIT</span>
       </div>
@@ -33,13 +29,10 @@ export function PartnerLogos({ className }: { className?: string }) {
       <div className="h-8 w-px bg-border" aria-hidden="true" />
 
       <div className="flex flex-col items-center gap-1.5">
-        <div
-          className="flex size-11 items-center justify-center rounded-xl border border-dashed text-muted-foreground"
-          title="SIT Student Body logo placeholder"
-        >
-          <Building2 className="size-5" />
+        <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl bg-white">
+          <Image src="/logos/sit-sac-logo.png" alt="SIT Student Activities Council" fill sizes="2.75rem" className="object-contain p-1" />
         </div>
-        <span className="text-[10px] font-medium text-muted-foreground">SIT-SB</span>
+        <span className="text-[10px] font-medium text-muted-foreground">SIT-SAC</span>
       </div>
     </div>
   );
