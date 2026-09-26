@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import {
-  Check,
   CheckCircle2,
   ShieldCheck,
   Eye,
@@ -339,21 +338,6 @@ export function BallotForm({
         <div className="mt-4">
           <VotingProgress total={event.categories.length} completed={completedCount} />
         </div>
-
-        {event.categories.length > 1 && (
-          <nav aria-label="Jump to category" className="mt-4 flex flex-wrap gap-2">
-            {event.categories.map((category) => (
-              <a
-                key={category.id}
-                href={`#category-${category.id}`}
-                className="rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted"
-              >
-                {selections[category.id] && <Check className="mr-1 inline size-3 text-primary" />}
-                {category.name}
-              </a>
-            ))}
-          </nav>
-        )}
 
         <div className="mt-8 flex flex-col gap-10">
           {event.categories.map((category) => (
