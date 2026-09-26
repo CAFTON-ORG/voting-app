@@ -21,6 +21,7 @@ import {
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
+import { CandidateAvatarStack } from "@/components/admin/candidate-avatar-stack";
 import {
   createCategoryAction,
   updateCategoryAction,
@@ -35,6 +36,7 @@ export type CategoryRow = {
   name: string;
   description: string | null;
   candidateCount: number;
+  candidates: { id: string; fullName: string; photoUrl: string | null }[];
 };
 
 const categoryFormSchema = createCategorySchema.pick({ name: true, description: true });
@@ -153,7 +155,12 @@ export function CategoryManager({
                   {category.description && (
                     <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">{category.candidateCount} candidates</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <CandidateAvatarStack candidates={category.candidates} />
+                    <p className="text-xs text-muted-foreground">
+                      {category.candidateCount} candidate{category.candidateCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   {onViewCandidates && (
