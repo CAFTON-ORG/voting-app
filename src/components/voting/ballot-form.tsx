@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -33,6 +32,7 @@ import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -257,18 +257,12 @@ export function BallotForm({
                 return (
                   <li key={category.id} className="flex items-center gap-4 rounded-lg border p-3">
                     <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {candidate.photoUrl ? (
-                        <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
-                      ) : (
-                        <div className="flex size-full items-center justify-center text-lg font-semibold text-muted-foreground">
-                          {candidate.fullName
-                            .split(" ")
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((p) => p[0]?.toUpperCase())
-                            .join("")}
-                        </div>
-                      )}
+                      <CandidatePhoto
+                        photoUrl={candidate.photoUrl}
+                        fullName={candidate.fullName}
+                        sizes="4rem"
+                        initialsClassName="text-lg"
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">

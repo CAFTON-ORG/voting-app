@@ -36,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
+          <Toaster position="top-right" />
         </ThemeProvider>
       </body>
     </html>

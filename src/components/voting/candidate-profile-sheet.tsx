@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Check } from "lucide-react";
 import {
   Sheet,
@@ -11,6 +10,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 
 export type PublicCandidateProfile = {
   id: string;
@@ -54,24 +54,12 @@ export function CandidateProfileSheet({
             </SheetHeader>
             <div className="flex flex-col gap-4 px-4">
               <div className="relative aspect-4/5 w-full overflow-hidden rounded-lg bg-muted">
-                {candidate.photoUrl ? (
-                  <Image
-                    src={candidate.photoUrl}
-                    alt={candidate.fullName}
-                    fill
-                    sizes="(min-width: 640px) 28rem, 100vw"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-5xl font-semibold text-muted-foreground">
-                    {candidate.fullName
-                      .split(" ")
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((p) => p[0]?.toUpperCase())
-                      .join("")}
-                  </div>
-                )}
+                <CandidatePhoto
+                  photoUrl={candidate.photoUrl}
+                  fullName={candidate.fullName}
+                  sizes="(min-width: 640px) 28rem, 100vw"
+                  initialsClassName="text-5xl"
+                />
               </div>
 
               <div>

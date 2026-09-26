@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, UserX } from "lucide-react";
@@ -9,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTableRowActions } from "@/components/admin/data-table-row-actions";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 import { deactivateCandidateAction } from "@/actions/candidates/mutations";
 
 export type CandidateCardData = {
@@ -43,24 +43,11 @@ export function CandidateCard({
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-lg">
       <div className="relative aspect-4/5 w-full bg-muted">
-        {candidate.photoUrl ? (
-          <Image
-            src={candidate.photoUrl}
-            alt={candidate.fullName}
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
-            {candidate.fullName
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((p) => p[0]?.toUpperCase())
-              .join("")}
-          </div>
-        )}
+        <CandidatePhoto
+          photoUrl={candidate.photoUrl}
+          fullName={candidate.fullName}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+        />
 
         {/* A flat tint instead of scaling the photo on hover — scaling a
             fill-positioned image risks visible overflow/clipping at the

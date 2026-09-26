@@ -45,6 +45,7 @@ export function AddMemberDialog() {
       router.refresh();
     } else {
       setError(result.message);
+      toast.error(result.message);
     }
   }
 

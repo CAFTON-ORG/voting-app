@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getTrustedIdentity } from "@/lib/auth/identity";
+import { getAdminUsersWithEmail } from "@/lib/admin/queries";
 import { inviteAdminSchema } from "@/lib/validation/admin";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
@@ -28,6 +29,11 @@ export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const data = inviteAdminSchema.parse(input);
     const email = data.email.trim().toLowerCase();
+
+    const existingAdmins = await getAdminUsersWithEmail();
+    if (existingAdmins.some((a) => a.active && a.email.toLowerCase() === email)) {
+      return fail("This email already belongs to an active team member.");
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.adminInvitation.updateMany({
