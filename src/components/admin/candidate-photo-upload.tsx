@@ -33,8 +33,21 @@ export function CandidatePhotoUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  // currentPhotoUrl changes identity after a successful upload/removal (a
+  // new Supabase URL, or null) - reset so the new image gets its own
+  // pulsing-skeleton-until-loaded moment instead of silently reusing
+  // whatever "loaded" happened to be for the previous photo. Adjusting
+  // state during render (React's own pattern for "reset state when a prop
+  // changes") rather than in an effect, which would cascade an extra render.
+  const [trackedUrl, setTrackedUrl] = useState(currentPhotoUrl);
+  if (currentPhotoUrl !== trackedUrl) {
+    setTrackedUrl(currentPhotoUrl);
+    setLoaded(false);
+  }
 
   function submitFile(file: File) {
     setError(null);
@@ -130,7 +143,18 @@ export function CandidatePhotoUpload({
         >
           {currentPhotoUrl ? (
             <>
-              <Image src={currentPhotoUrl} alt="" fill sizes="7rem" className="rounded-full object-cover" />
+              <Image
+                src={currentPhotoUrl}
+                alt=""
+                fill
+                sizes="7rem"
+                onLoad={() => setLoaded(true)}
+                className={cn(
+                  "rounded-full object-cover transition-opacity duration-300",
+                  loaded ? "opacity-100" : "opacity-0"
+                )}
+              />
+              {!loaded && <div aria-hidden className="absolute inset-0 animate-pulse rounded-full bg-muted" />}
               <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-all group-hover:bg-black/50 group-hover:opacity-100">
                 <Pencil className="size-5 text-white" />
               </div>
