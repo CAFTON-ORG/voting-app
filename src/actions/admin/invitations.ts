@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getTrustedIdentity } from "@/lib/auth/identity";
+import { canManageRole, canInviteRole } from "@/lib/auth/permissions";
 import { getAdminUsersWithEmail, displayName } from "@/lib/admin/queries";
 import { inviteAdminSchema } from "@/lib/validation/admin";
 import { sendAdminInviteEmail } from "@/lib/email/resend";
@@ -17,17 +17,6 @@ async function getBaseUrl(): Promise<string> {
   return `${protocol}://${host}`;
 }
 
-/** True if `adminUserId` is the only active ADMIN — used to block actions
- * that would leave the system with no one able to manage it at all. */
-async function isLastActiveAdmin(tx: Prisma.TransactionClient, adminUserId: string): Promise<boolean> {
-  const target = await tx.adminUser.findUnique({ where: { id: adminUserId } });
-  if (!target || target.role !== "ADMIN" || !target.active) return false;
-  const otherActiveAdmins = await tx.adminUser.count({
-    where: { role: "ADMIN", active: true, id: { not: adminUserId } },
-  });
-  return otherActiveAdmins === 0;
-}
-
 /** Revokes any existing PENDING invitation for the email first, so the
  * unique(email, status) constraint never blocks re-inviting someone —
  * ACCEPTED/REVOKED history for that email is preserved rather than
@@ -37,6 +26,10 @@ export async function inviteAdminAction(input: unknown): Promise<ActionResult<{ 
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const data = inviteAdminSchema.parse(input);
     const email = data.email.trim().toLowerCase();
+
+    if (!canInviteRole(admin.role, data.role)) {
+      return fail(`Your role can't invite a new ${data.role} member.`);
+    }
 
     const existingAdmins = await getAdminUsersWithEmail();
     if (existingAdmins.some((a) => a.active && a.email.toLowerCase() === email)) {
@@ -146,10 +139,16 @@ export async function updateAdminRoleAction(adminUserId: string, role: unknown):
     const newRole = roleSchema.parse(role);
 
     await prisma.$transaction(async (tx) => {
-      if (newRole !== "ADMIN" && (await isLastActiveAdmin(tx, adminUserId))) {
-        throw new Error("There must always be at least one active ADMIN.");
+      const target = await tx.adminUser.findUniqueOrThrow({ where: { id: adminUserId } });
+      // Both the account's *current* role and the role it would become
+      // must be strictly below the actor's own level — the first blocks
+      // touching a peer/superior account at all, the second blocks using
+      // a role change to promote someone up to (or past) the actor's own
+      // level as a workaround.
+      if (!canManageRole(admin.role, target.role) || !canManageRole(admin.role, newRole)) {
+        throw new Error("You can't change this member to that role.");
       }
-      const target = await tx.adminUser.update({ where: { id: adminUserId }, data: { role: newRole } });
+      await tx.adminUser.update({ where: { id: adminUserId }, data: { role: newRole } });
       await tx.auditLog.create({
         data: {
           actorAdminId: admin.adminUserId,
@@ -172,8 +171,9 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     await prisma.$transaction(async (tx) => {
-      if (await isLastActiveAdmin(tx, adminUserId)) {
-        throw new Error("There must always be at least one active ADMIN.");
+      const existing = await tx.adminUser.findUniqueOrThrow({ where: { id: adminUserId } });
+      if (!canManageRole(admin.role, existing.role)) {
+        throw new Error("You can't remove this member.");
       }
       const target = await tx.adminUser.update({ where: { id: adminUserId }, data: { active: false } });
       await tx.auditLog.create({
@@ -203,6 +203,9 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       const invitation = await tx.adminInvitation.findUniqueOrThrow({ where: { id: invitationId } });
       if (invitation.status !== "PENDING") {
         throw new Error("Only a pending invitation can be resent.");
+      }
+      if (!canInviteRole(admin.role, invitation.role)) {
+        throw new Error("You can't manage this invitation.");
       }
       await tx.adminInvitation.update({
         where: { id: invitationId },
@@ -236,6 +239,10 @@ export async function cancelInvitationAction(invitationId: string): Promise<Acti
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     await prisma.$transaction(async (tx) => {
+      const existing = await tx.adminInvitation.findUniqueOrThrow({ where: { id: invitationId } });
+      if (!canInviteRole(admin.role, existing.role)) {
+        throw new Error("You can't manage this invitation.");
+      }
       const invitation = await tx.adminInvitation.update({
         where: { id: invitationId },
         data: { status: "REVOKED" },
