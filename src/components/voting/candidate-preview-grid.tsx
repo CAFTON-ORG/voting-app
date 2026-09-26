@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 
 type PreviewCandidate = {
   id: string;
@@ -93,24 +93,11 @@ export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandid
           {filtered.map((candidate) => (
             <div key={candidate.id} className="flex w-36 shrink-0 snap-start flex-col gap-3 sm:w-44">
               <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl bg-muted">
-                {candidate.photoUrl ? (
-                  <Image
-                    src={candidate.photoUrl}
-                    alt={candidate.fullName}
-                    fill
-                    sizes="(min-width: 640px) 11rem, 9rem"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
-                    {candidate.fullName
-                      .split(" ")
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((p) => p[0]?.toUpperCase())
-                      .join("")}
-                  </div>
-                )}
+                <CandidatePhoto
+                  photoUrl={candidate.photoUrl}
+                  fullName={candidate.fullName}
+                  sizes="(min-width: 640px) 11rem, 9rem"
+                />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">#{candidate.candidateNumber}</p>

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DomainsInput } from "@/components/admin/domains-input";
 import {
   Dialog,
   DialogContent,
@@ -99,15 +100,9 @@ export function CreateEventDialog() {
                   <FormItem>
                     <FormLabel>Allowed voter domains</FormLabel>
                     <FormControl>
-                      <Input
-                        value={field.value.join(", ")}
-                        onChange={(e) =>
-                          field.onChange(e.target.value.split(",").map((d) => d.trim()).filter(Boolean))
-                        }
-                        placeholder="s.ubaguio.edu, e.ubaguio.edu"
-                      />
+                      <DomainsInput value={field.value} onChange={field.onChange} placeholder="s.ubaguio.edu" />
                     </FormControl>
-                    <FormDescription>Comma-separated, no leading &quot;@&quot;.</FormDescription>
+                    <FormDescription>Type a domain and press Enter — no leading &quot;@&quot;.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

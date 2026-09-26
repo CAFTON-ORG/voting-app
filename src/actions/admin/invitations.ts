@@ -1,33 +1,40 @@
 "use server";
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getTrustedIdentity } from "@/lib/auth/identity";
+import { canManageRole, canInviteRole } from "@/lib/auth/permissions";
+import { getAdminUsersWithEmail, displayName } from "@/lib/admin/queries";
 import { inviteAdminSchema } from "@/lib/validation/admin";
+import { sendAdminInviteEmail } from "@/lib/email/resend";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
-/** True if `adminUserId` is the only active ADMIN — used to block actions
- * that would leave the system with no one able to manage it at all. */
-async function isLastActiveAdmin(tx: Prisma.TransactionClient, adminUserId: string): Promise<boolean> {
-  const target = await tx.adminUser.findUnique({ where: { id: adminUserId } });
-  if (!target || target.role !== "ADMIN" || !target.active) return false;
-  const otherActiveAdmins = await tx.adminUser.count({
-    where: { role: "ADMIN", active: true, id: { not: adminUserId } },
-  });
-  return otherActiveAdmins === 0;
+async function getBaseUrl(): Promise<string> {
+  const host = (await headers()).get("host") ?? "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  return `${protocol}://${host}`;
 }
 
 /** Revokes any existing PENDING invitation for the email first, so the
  * unique(email, status) constraint never blocks re-inviting someone —
  * ACCEPTED/REVOKED history for that email is preserved rather than
  * needing to be deleted first. */
-export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
+export async function inviteAdminAction(input: unknown): Promise<ActionResult<{ emailSent: boolean }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     const data = inviteAdminSchema.parse(input);
     const email = data.email.trim().toLowerCase();
+
+    if (!canInviteRole(admin.role, data.role)) {
+      return fail(`Your role can't invite a new ${data.role} member.`);
+    }
+
+    const existingAdmins = await getAdminUsersWithEmail();
+    if (existingAdmins.some((a) => a.active && a.email.toLowerCase() === email)) {
+      return fail("This email already belongs to an active team member.");
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.adminInvitation.updateMany({
@@ -53,7 +60,18 @@ export async function inviteAdminAction(input: unknown): Promise<ActionResult> {
       });
     });
 
-    return ok(undefined);
+    // Best-effort: the invitation itself is already committed above either
+    // way, so a flaky email provider never blocks creating it — the admin
+    // can still share the accept link manually, same as before Resend.
+    const inviter = existingAdmins.find((a) => a.email.toLowerCase() === admin.email.toLowerCase());
+    const emailResult = await sendAdminInviteEmail({
+      to: email,
+      role: data.role,
+      inviterName: inviter ? displayName(inviter) : admin.email,
+      acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
+    });
+
+    return ok({ emailSent: emailResult.ok });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not send the invitation. Please check the email address."));
   }
@@ -121,10 +139,16 @@ export async function updateAdminRoleAction(adminUserId: string, role: unknown):
     const newRole = roleSchema.parse(role);
 
     await prisma.$transaction(async (tx) => {
-      if (newRole !== "ADMIN" && (await isLastActiveAdmin(tx, adminUserId))) {
-        throw new Error("There must always be at least one active ADMIN.");
+      const target = await tx.adminUser.findUniqueOrThrow({ where: { id: adminUserId } });
+      // Both the account's *current* role and the role it would become
+      // must be strictly below the actor's own level — the first blocks
+      // touching a peer/superior account at all, the second blocks using
+      // a role change to promote someone up to (or past) the actor's own
+      // level as a workaround.
+      if (!canManageRole(admin.role, target.role) || !canManageRole(admin.role, newRole)) {
+        throw new Error("You can't change this member to that role.");
       }
-      const target = await tx.adminUser.update({ where: { id: adminUserId }, data: { role: newRole } });
+      await tx.adminUser.update({ where: { id: adminUserId }, data: { role: newRole } });
       await tx.auditLog.create({
         data: {
           actorAdminId: admin.adminUserId,
@@ -147,8 +171,9 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     await prisma.$transaction(async (tx) => {
-      if (await isLastActiveAdmin(tx, adminUserId)) {
-        throw new Error("There must always be at least one active ADMIN.");
+      const existing = await tx.adminUser.findUniqueOrThrow({ where: { id: adminUserId } });
+      if (!canManageRole(admin.role, existing.role)) {
+        throw new Error("You can't remove this member.");
       }
       const target = await tx.adminUser.update({ where: { id: adminUserId }, data: { active: false } });
       await tx.auditLog.create({
@@ -165,17 +190,22 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
   }
 }
 
-/** "Resend" just extends the expiry on the existing pending row — there's
- * no outbound email system in this app yet (invitees are given the
- * /admin/accept-invitation link directly), so there's nothing to
- * re-send except the invitation's own validity window. */
-export async function resendInvitationAction(invitationId: string): Promise<ActionResult> {
+/** Extends the expiry on the existing pending row and, if Resend is
+ * configured, actually re-sends the invite email — before Resend, this
+ * only ever extended the expiry window (invitees got the accept link
+ * shared manually), so a "resend" was a bit of a misnomer. */
+export async function resendInvitationAction(invitationId: string): Promise<ActionResult<{ emailSent: boolean }>> {
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
-    await prisma.$transaction(async (tx) => {
+    const existingAdmins = await getAdminUsersWithEmail();
+
+    const invitation = await prisma.$transaction(async (tx) => {
       const invitation = await tx.adminInvitation.findUniqueOrThrow({ where: { id: invitationId } });
       if (invitation.status !== "PENDING") {
         throw new Error("Only a pending invitation can be resent.");
+      }
+      if (!canInviteRole(admin.role, invitation.role)) {
+        throw new Error("You can't manage this invitation.");
       }
       await tx.adminInvitation.update({
         where: { id: invitationId },
@@ -188,8 +218,18 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
           metadata: { email: invitation.email },
         },
       });
+      return invitation;
     });
-    return ok(undefined);
+
+    const inviter = existingAdmins.find((a) => a.email.toLowerCase() === admin.email.toLowerCase());
+    const emailResult = await sendAdminInviteEmail({
+      to: invitation.email,
+      role: invitation.role,
+      inviterName: inviter ? displayName(inviter) : admin.email,
+      acceptUrl: `${await getBaseUrl()}/admin/accept-invitation`,
+    });
+
+    return ok({ emailSent: emailResult.ok });
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not resend the invitation."));
   }
@@ -199,6 +239,10 @@ export async function cancelInvitationAction(invitationId: string): Promise<Acti
   try {
     const admin = await requirePermission("MANAGE_ADMIN_USERS");
     await prisma.$transaction(async (tx) => {
+      const existing = await tx.adminInvitation.findUniqueOrThrow({ where: { id: invitationId } });
+      if (!canInviteRole(admin.role, existing.role)) {
+        throw new Error("You can't manage this invitation.");
+      }
       const invitation = await tx.adminInvitation.update({
         where: { id: invitationId },
         data: { status: "REVOKED" },

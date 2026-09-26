@@ -35,14 +35,28 @@ export function EventHero({
   ballotCount?: number | null;
 }) {
   const { bg, fg } = getAvatarColor(name);
+  const hasStatusPanel =
+    (state === "SCHEDULED" && votingOpensAt) ||
+    (state === "OPEN" && votingClosesAt) ||
+    ((state === "CLOSED" || state === "FINALIZED") && votingClosesAt) ||
+    state === "PAUSED" ||
+    state === "OPEN" ||
+    ballotCount != null;
 
   return (
-    <div className="flex flex-col items-center gap-5 px-6 pt-12 pb-8 text-center sm:pt-16">
-      <div
-        className="flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
-        style={{ backgroundColor: bg, color: fg }}
-      >
-        <CalendarDays className="size-8 sm:size-9" />
+    <div className="flex flex-col items-center gap-6 px-6 pt-12 pb-8 text-center sm:pt-16">
+      <div className="relative flex items-center justify-center">
+        <div
+          aria-hidden
+          className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28"
+          style={{ backgroundColor: bg }}
+        />
+        <div
+          className="relative flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
+          style={{ backgroundColor: bg, color: fg }}
+        >
+          <CalendarDays className="size-8 sm:size-9" />
+        </div>
       </div>
 
       <div>
@@ -52,44 +66,49 @@ export function EventHero({
 
       <VotingStatusBadge state={state} />
 
-      {state === "SCHEDULED" && votingOpensAt && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            Voting opens <span className="font-medium text-foreground">{formatSchedule(votingOpensAt)}</span>
-          </p>
-          <VotingCountdown target={votingOpensAt} label="Voting opens in" />
+      {hasStatusPanel && (
+        <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-2xl border bg-card/60 px-6 py-6 shadow-sm">
+          {state === "SCHEDULED" && votingOpensAt && (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Voting opens <span className="font-medium text-foreground">{formatSchedule(votingOpensAt)}</span>
+              </p>
+              <VotingCountdown target={votingOpensAt} label="Voting opens in" />
+            </div>
+          )}
+
+          {state === "OPEN" && votingClosesAt && (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Voting closes <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
+              </p>
+              <VotingCountdown target={votingClosesAt} label="Voting closes in" />
+            </div>
+          )}
+
+          {(state === "CLOSED" || state === "FINALIZED") && votingClosesAt && (
+            <p className="text-sm text-muted-foreground">
+              Voting ended <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
+            </p>
+          )}
+
+          {state === "PAUSED" && (
+            <p className="text-sm text-muted-foreground">Voting is temporarily paused. Please check back shortly.</p>
+          )}
+
+          {state === "OPEN" && (
+            <Button asChild size="lg" className="w-full">
+              <Link href={`/events/${slug}/vote`}>Vote Now</Link>
+            </Button>
+          )}
+
+          {ballotCount != null && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{ballotCount.toLocaleString()}</span> vote
+              {ballotCount === 1 ? "" : "s"} submitted
+            </p>
+          )}
         </div>
-      )}
-
-      {state === "OPEN" && votingClosesAt && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            Voting closes <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
-          </p>
-          <VotingCountdown target={votingClosesAt} label="Voting closes in" />
-        </div>
-      )}
-
-      {(state === "CLOSED" || state === "FINALIZED") && votingClosesAt && (
-        <p className="text-sm text-muted-foreground">
-          Voting ended <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
-        </p>
-      )}
-
-      {state === "PAUSED" && (
-        <p className="text-sm text-muted-foreground">Voting is temporarily paused. Please check back shortly.</p>
-      )}
-
-      {state === "OPEN" && (
-        <Button asChild size="lg" className="mt-2 w-full max-w-xs">
-          <Link href={`/events/${slug}/vote`}>Vote Now</Link>
-        </Button>
-      )}
-
-      {ballotCount != null && (
-        <p className="text-sm text-muted-foreground">
-          {ballotCount.toLocaleString()} vote{ballotCount === 1 ? "" : "s"} submitted
-        </p>
       )}
     </div>
   );

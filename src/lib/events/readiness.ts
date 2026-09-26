@@ -44,3 +44,11 @@ export function getElapsedPercent(opensAt: Date, closesAt: Date): number | null 
   const elapsed = Date.now() - opensAt.getTime();
   return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
 }
+
+/** Same reasoning as getElapsedPercent — reading the current time inline
+ * in a component body trips the React Compiler's purity rule, so any
+ * "has this deadline already passed" check needs to go through a plain
+ * lib function instead. */
+export function isFuture(date: Date): boolean {
+  return date.getTime() > Date.now();
+}

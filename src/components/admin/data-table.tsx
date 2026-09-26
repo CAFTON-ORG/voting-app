@@ -71,7 +71,7 @@ export function DataTable<TData extends { id: string }, TValue>({
           placeholder={searchPlaceholder}
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
-          className="max-w-sm"
+          className="max-w-xs"
         />
         {actions}
       </div>

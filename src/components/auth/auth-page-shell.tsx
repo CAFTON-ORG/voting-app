@@ -1,5 +1,18 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { ChevronLeft, ScrollText, UserCheck, EyeOff, Lock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/shared/logo";
 import { PartnerLogos } from "@/components/shared/partner-logos";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
@@ -16,16 +29,32 @@ export function AuthPageShell({
   description,
   children,
   footer,
+  backHref = "/",
+  backLabel = "Back",
 }: {
   eyebrow?: string;
   title: string;
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  /** Where the top-left back link goes — defaults to the public home page.
+   * Pass a more specific page (e.g. an event's own landing page) when one
+   * makes more sense for that particular sign-in-adjacent screen. */
+  backHref?: string;
+  backLabel?: string;
 }) {
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted/30 px-6 py-12">
       <AuroraGlow />
+      <Link
+        href={backHref}
+        className="absolute top-6 left-6 flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="size-4" />
+        {backLabel}
+      </Link>
       <Card className="w-full max-w-sm rounded-2xl border-border/60 shadow-lg shadow-black/3 dark:shadow-black/20">
         <CardHeader className="flex flex-col items-center gap-3 text-center">
           <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
@@ -42,9 +71,63 @@ export function AuthPageShell({
         {children && <CardContent className="flex flex-col gap-4">{children}</CardContent>}
         <CardFooter className="flex flex-col gap-4 border-t pt-5">
           <PartnerLogos />
-          {footer && <p className="text-center text-xs text-muted-foreground">{footer}</p>}
+          {/* footer is an arbitrary ReactNode (plain text on most pages,
+              but SignedInBar - a <div> wrapping a sign-out <form> - on the
+              vote page's ineligible-voter state), so this must be a <div>,
+              not a <p>: a <div>/<form> nested inside a <p> is invalid HTML
+              and was causing a real hydration error. */}
+          {footer && <div className="text-center text-xs text-muted-foreground">{footer}</div>}
+          <p className="text-center text-xs text-muted-foreground">
+            By signing in, you agree to how this platform handles your data — see the{" "}
+            <button
+              type="button"
+              onClick={() => setPrivacyOpen(true)}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Privacy Notice
+            </button>
+            .
+          </p>
         </CardFooter>
       </Card>
+
+      <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScrollText className="size-4.5" />
+              Privacy Notice
+            </DialogTitle>
+            <DialogDescription>What signing in shares, and how it&apos;s used.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 text-sm">
+            <div className="flex gap-3">
+              <UserCheck className="size-4.5 shrink-0 text-muted-foreground" />
+              <p>
+                Signing in with Google shares your account&apos;s name, email, and profile photo with this
+                platform — used only to verify who you are, whether that&apos;s confirming a voter&apos;s
+                eligibility or an admin&apos;s access.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <EyeOff className="size-4.5 shrink-0 text-muted-foreground" />
+              <p>
+                For elections specifically, your identity is stored separately from your ballot
+                selections — there is no record anywhere linking your account to who you voted for.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Lock className="size-4.5 shrink-0 text-muted-foreground" />
+              <p>Your Google credentials themselves are never seen or stored by this platform at all.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPrivacyOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

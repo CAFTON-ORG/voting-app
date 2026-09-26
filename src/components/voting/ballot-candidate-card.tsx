@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { Check } from "lucide-react";
 import { RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 import { cn } from "cn";
 import type { PublicCandidateProfile } from "@/components/voting/candidate-profile-sheet";
 
@@ -35,24 +35,17 @@ export function BallotCandidateCard({
       <RadioGroupItem value={candidate.id} className="sr-only" />
 
       <div className="relative aspect-4/5 w-full bg-muted">
-        {candidate.photoUrl ? (
-          <Image
-            src={candidate.photoUrl}
-            alt={candidate.fullName}
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-3xl font-semibold text-muted-foreground">
-            {candidate.fullName
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((p) => p[0]?.toUpperCase())
-              .join("")}
-          </div>
-        )}
+        <CandidatePhoto
+          photoUrl={candidate.photoUrl}
+          fullName={candidate.fullName}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+        />
+
+        {/* A flat tint instead of scaling the photo on hover — scaling a
+            fill-positioned image risks visible overflow/clipping at the
+            card's rounded corners; this reads as "hovered" just as clearly
+            without moving the image at all. */}
+        <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
 
         <Badge className="absolute top-2 left-2 shadow-sm" variant="secondary">
           #{candidate.candidateNumber}

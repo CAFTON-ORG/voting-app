@@ -25,6 +25,7 @@ export default async function AdminTeamPage() {
         id: a.id,
         email: a.email,
         fullName: a.fullName,
+        avatarUrl: a.avatarUrl,
         role: a.role,
         status: a.active ? "ACTIVE" : "EXPIRED",
         kind: "member",
@@ -35,6 +36,7 @@ export default async function AdminTeamPage() {
         id: invite.id,
         email: invite.email,
         fullName: null,
+        avatarUrl: null,
         role: invite.role,
         status: invite.expiresAt < new Date() ? "EXPIRED" : "PENDING",
         kind: "invitation",
@@ -46,7 +48,7 @@ export default async function AdminTeamPage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageTitle icon={Users}>Team</PageTitle>
-        {canManage && <AddMemberDialog />}
+        {canManage && <AddMemberDialog viewerRole={admin.role} />}
       </div>
 
       <StatCards
@@ -56,7 +58,7 @@ export default async function AdminTeamPage() {
         ]}
       />
 
-      <MembersTable data={rows} canManage={canManage} />
+      <MembersTable data={rows} viewerRole={admin.role} />
     </div>
   );
 }

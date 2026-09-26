@@ -71,9 +71,17 @@ export function EventStateActions({
           </Button>
         )}
         {state === "OPEN" && can("PAUSE_VOTING") && (
-          <Button variant="outline" disabled={pending} onClick={() => run(() => pauseVotingAction(eventId))}>
-            Pause Voting
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button variant="outline" disabled={pending}>
+                Pause Voting
+              </Button>
+            }
+            title="Pause voting for this event?"
+            description="Voters won't be able to submit ballots until you resume voting."
+            confirmLabel="Pause Voting"
+            onConfirm={() => run(() => pauseVotingAction(eventId))}
+          />
         )}
         {state === "PAUSED" && can("RESUME_VOTING") && (
           <Button disabled={pending} onClick={() => run(() => resumeVotingAction(eventId))}>
@@ -126,22 +134,7 @@ export function EventStateActions({
         title="Reopen voting?"
         variant="destructive"
         confirmLabel="Reopen Voting"
-        description={
-          <div className="flex flex-col gap-2 pt-1">
-            <p>This is an exceptional action, logged to the audit trail. A reason is required.</p>
-            <Label htmlFor="reopen-reason" className="sr-only">
-              Reason
-            </Label>
-            <Textarea
-              id="reopen-reason"
-              value={reason}
-              onChange={(e) => handleReasonChange(e.target.value)}
-              aria-invalid={!!reasonError}
-              placeholder="Why is this event being reopened?"
-            />
-            {reasonError && <p className="text-xs text-destructive">{reasonError}</p>}
-          </div>
-        }
+        description="This is an exceptional action, logged to the audit trail. A reason is required."
         onConfirm={async () => {
           const parsed = reopenVotingSchema.shape.reason.safeParse(reason);
           if (!parsed.success) {
@@ -152,7 +145,21 @@ export function EventStateActions({
           if (!result.ok) throw new Error(result.message);
           setReason("");
         }}
-      />
+      >
+        <div className="flex flex-col gap-2 pt-1">
+          <Label htmlFor="reopen-reason" className="sr-only">
+            Reason
+          </Label>
+          <Textarea
+            id="reopen-reason"
+            value={reason}
+            onChange={(e) => handleReasonChange(e.target.value)}
+            aria-invalid={!!reasonError}
+            placeholder="Why is this event being reopened?"
+          />
+          {reasonError && <p className="text-xs text-destructive">{reasonError}</p>}
+        </div>
+      </ConfirmDialog>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

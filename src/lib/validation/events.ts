@@ -54,14 +54,16 @@ export const reorderCategoriesSchema = z.object({
   orderedCategoryIds: z.array(z.uuid()).min(1),
 });
 
+// No candidateNumber here — createCandidateAction assigns the next number
+// for the category automatically (server-side, from the current max), so
+// it's never client input on create. Renumbering an existing candidate is
+// still a deliberate, manual, separate action — see
+// updateCandidateStructuralSchema below.
 export const createCandidateSchema = z.object({
   eventId: z.uuid(),
   categoryId: z.uuid({ error: "Choose a category" }),
-  candidateNumber: z.coerce.number({ error: "A candidate number is required" }).int().positive("Must be a positive number"),
   fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters"),
   programYear: z.string().trim().max(100, "Keep it under 100 characters").optional(),
-  tagline: z.string().trim().max(280, "Keep it under 280 characters").optional(),
-  bio: z.string().trim().max(2000, "Keep it under 2000 characters").optional(),
   displayOrder: z.number().int().default(0),
 });
 
@@ -71,8 +73,6 @@ export const updateCandidateLimitedSchema = z.object({
   candidateId: z.uuid(),
   fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters").optional(),
   programYear: z.string().trim().max(100, "Keep it under 100 characters").optional(),
-  tagline: z.string().trim().max(280, "Keep it under 280 characters").optional(),
-  bio: z.string().trim().max(2000, "Keep it under 2000 characters").optional(),
   displayOrder: z.number().int().optional(),
   photoUrl: z.url().optional(),
 });

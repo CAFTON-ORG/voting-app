@@ -18,18 +18,26 @@ import {
   resendInvitationAction,
   cancelInvitationAction,
 } from "@/actions/admin/invitations";
+import { canManageRole, canInviteRole } from "@/lib/auth/permissions";
 import type { AdminRole } from "@prisma/client";
 
 export type MemberRow = {
   id: string;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
   role: AdminRole;
   status: "ACTIVE" | "PENDING" | "EXPIRED";
   kind: "member" | "invitation";
 };
 
-export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage: boolean }) {
+const ALL_ROLES: AdminRole[] = ["ADMIN", "MODERATOR", "AUDITOR"];
+
+/** `viewerRole` drives per-row permission, not a single flat flag: an
+ * ADMIN and a MODERATOR looking at this same table see different rows as
+ * manageable, per the role hierarchy — nobody can manage a peer or a
+ * higher role (see canManageRole/canInviteRole in lib/auth/permissions). */
+export function MembersTable({ data, viewerRole }: { data: MemberRow[]; viewerRole: AdminRole }) {
   const router = useRouter();
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -50,7 +58,7 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
         const label = row.original.fullName || row.original.email;
         return (
           <div className="flex items-center gap-2">
-            <UserAvatar label={label} size="sm" />
+            <UserAvatar label={label} imageUrl={row.original.avatarUrl} size="sm" />
             <div>
               <p className="text-sm">{label}</p>
               {row.original.fullName && (
@@ -66,7 +74,13 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
       header: "Role",
       cell: ({ row }) => {
         const member = row.original;
-        if (canManage && member.kind === "member") {
+        const canManageThisRow = member.kind === "member" && canManageRole(viewerRole, member.role);
+        if (canManageThisRow) {
+          // Only roles the viewer could also manage once assigned — e.g. a
+          // MODERATOR can never see ADMIN/MODERATOR as an option here,
+          // since promoting someone to either would put them at or above
+          // the viewer's own level.
+          const assignableRoles = ALL_ROLES.filter((r) => canManageRole(viewerRole, r));
           return (
             <Select
               value={member.role}
@@ -84,9 +98,11 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ADMIN">ADMIN</SelectItem>
-                <SelectItem value="MODERATOR">MODERATOR</SelectItem>
-                <SelectItem value="AUDITOR">AUDITOR</SelectItem>
+                {assignableRoles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           );
@@ -103,8 +119,10 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
-        if (!canManage) return null;
         const member = row.original;
+        const canManageThisRow =
+          member.kind === "member" ? canManageRole(viewerRole, member.role) : canInviteRole(viewerRole, member.role);
+        if (!canManageThisRow) return null;
         return (
           <div className="flex justify-end">
             <DataTableRowActions>
@@ -133,7 +151,11 @@ export function MembersTable({ data, canManage }: { data: MemberRow[]; canManage
                     onClick={async () => {
                       const result = await resendInvitationAction(member.id);
                       if (result.ok) {
-                        toast.success("Invitation extended");
+                        toast.success(
+                          result.data.emailSent
+                            ? "Invitation extended and re-sent"
+                            : "Invitation extended, but the email couldn't be sent"
+                        );
                         router.refresh();
                       } else {
                         toast.error(result.message);

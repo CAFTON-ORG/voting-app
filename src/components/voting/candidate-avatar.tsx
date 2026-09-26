@@ -1,9 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-/** Real candidate photos aren't configured yet (pending official assets
- * and, later, a Storage/CDN decision — see project notes). Until then
- * every candidate shows this initials placeholder instead of a broken
- * image or blank space, so the ballot never looks unfinished. */
+/** Small inline candidate avatar (admin list rows, results tab) — shows
+ * the real photo when one's been uploaded, falling back to initials
+ * otherwise so a candidate with no photo yet never looks broken/unfinished. */
 export function CandidateAvatar({
   photoUrl,
   fullName,

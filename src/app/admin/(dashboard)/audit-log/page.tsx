@@ -29,6 +29,10 @@ export default async function AdminAuditLogPage() {
       entry.actorAdmin && actorIdentities.has(entry.actorAdmin.id)
         ? displayName(actorIdentities.get(entry.actorAdmin.id)!)
         : null,
+    actorAvatarUrl:
+      entry.actorAdmin && actorIdentities.has(entry.actorAdmin.id)
+        ? (actorIdentities.get(entry.actorAdmin.id)!.avatarUrl ?? null)
+        : null,
     actorRole: entry.actorAdmin?.role ?? "—",
     metadata: (entry.metadata as Record<string, unknown>) ?? {},
     createdAt: entry.createdAt,

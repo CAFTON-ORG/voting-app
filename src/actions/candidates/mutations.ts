@@ -12,7 +12,7 @@ import {
   updateCandidateStructuralSchema,
 } from "@/lib/validation/events";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
-import type { EventState } from "@prisma/client";
+import type { EventState, Prisma } from "@prisma/client";
 
 /** Structural candidate/category changes (create, delete, renumber,
  * reassign category) are only safe before any ballot could exist for the
@@ -150,6 +150,15 @@ export async function deleteCategoryAction(categoryId: string): Promise<ActionRe
   }
 }
 
+/** One more than the highest number already used in this category, or 1
+ * if it has none yet — candidate numbers are never client input on
+ * create, only ever assigned this way, so two candidates in the same
+ * category can never collide by an admin's typo. */
+async function nextCandidateNumber(tx: Prisma.TransactionClient, categoryId: string): Promise<number> {
+  const result = await tx.candidate.aggregate({ where: { categoryId }, _max: { candidateNumber: true } });
+  return (result._max.candidateNumber ?? 0) + 1;
+}
+
 export async function createCandidateAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
     const admin = await requirePermission("MANAGE_CANDIDATES_FULL");
@@ -164,7 +173,12 @@ export async function createCandidateAction(input: unknown): Promise<ActionResul
       });
 
       const created = await tx.candidate.create({
-        data: { ...data, categoryId: category.id, createdById: admin.adminUserId },
+        data: {
+          ...data,
+          categoryId: category.id,
+          candidateNumber: await nextCandidateNumber(tx, category.id),
+          createdById: admin.adminUserId,
+        },
       });
       await tx.auditLog.create({
         data: {
@@ -248,7 +262,7 @@ export async function deactivateCandidateAction(candidateId: string): Promise<Ac
   }
 }
 
-/** Non-structural edits (name, bio, tagline, photo, display order) — safe
+/** Non-structural edits (name, program/year, photo, display order) — safe
  * at any point except after FINALIZED, when the event record is frozen.
  * Does NOT touch candidateNumber, category, or active status. */
 export async function updateCandidateLimitedAction(input: unknown): Promise<ActionResult> {
@@ -268,8 +282,6 @@ export async function updateCandidateLimitedAction(input: unknown): Promise<Acti
         data: {
           fullName: data.fullName,
           programYear: data.programYear,
-          tagline: data.tagline,
-          bio: data.bio,
           displayOrder: data.displayOrder,
           photoUrl: data.photoUrl,
         },

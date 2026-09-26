@@ -3,7 +3,14 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-export type TrustedIdentity = { authUserId: string; email: string; fullName: string | null };
+export type TrustedIdentity = {
+  authUserId: string;
+  email: string;
+  fullName: string | null;
+  /** Google's profile photo URL, from user_metadata — purely cosmetic
+   * (an avatar image), never used for any authorization decision. */
+  avatarUrl: string | null;
+};
 
 /** The one place the app establishes "who is making this request." Uses
  * getClaims() (cryptographically verifies the JWT, refreshing it if
@@ -18,10 +25,15 @@ export const getTrustedIdentity = cache(async (): Promise<TrustedIdentity | null
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims?.sub || !data.claims.email) return null;
-  const claims = data.claims as { sub: string; email: string; user_metadata?: { full_name?: string } };
+  const claims = data.claims as {
+    sub: string;
+    email: string;
+    user_metadata?: { full_name?: string; avatar_url?: string };
+  };
   return {
     authUserId: claims.sub,
     email: claims.email,
     fullName: claims.user_metadata?.full_name ?? null,
+    avatarUrl: claims.user_metadata?.avatar_url ?? null,
   };
 });

@@ -7,9 +7,10 @@ import { prisma } from "@/lib/prisma/client";
 import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
-import { getEventReadiness, getElapsedPercent } from "@/lib/events/readiness";
+import { getEventReadiness, getElapsedPercent, isFuture } from "@/lib/events/readiness";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { EventStateActions } from "@/components/admin/event-state-actions";
+import { VotingCountdown } from "@/components/voting/voting-countdown";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
 import { RescheduleEventDialog } from "@/components/admin/reschedule-event-dialog";
 import { EventWorkspaceTabs } from "@/components/admin/event-workspace-tabs";
@@ -78,6 +79,14 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
   const updatedByName =
     event.updatedById && adminIdentities.has(event.updatedById)
       ? displayName(adminIdentities.get(event.updatedById)!)
+      : null;
+  const createdByAvatarUrl =
+    event.createdById && adminIdentities.has(event.createdById)
+      ? (adminIdentities.get(event.createdById)!.avatarUrl ?? null)
+      : null;
+  const updatedByAvatarUrl =
+    event.updatedById && adminIdentities.has(event.updatedById)
+      ? (adminIdentities.get(event.updatedById)!.avatarUrl ?? null)
       : null;
 
   const elapsedPercent =
@@ -171,7 +180,9 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Opens</p>
-                      <p className="text-sm font-medium">{event.votingOpensAt.toLocaleString()}</p>
+                      <p className="text-sm font-medium">
+                        {event.votingOpensAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -180,9 +191,23 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Closes</p>
-                      <p className="text-sm font-medium">{event.votingClosesAt.toLocaleString()}</p>
+                      <p className="text-sm font-medium">
+                        {event.votingClosesAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}
+                      </p>
                     </div>
                   </div>
+                  {votingEverActive && isFuture(event.votingClosesAt) ? (
+                    <div className="flex justify-center rounded-lg border bg-muted/40 py-3">
+                      <VotingCountdown target={event.votingClosesAt} label="Closes in" />
+                    </div>
+                  ) : (
+                    event.state === "SCHEDULED" &&
+                    isFuture(event.votingOpensAt) && (
+                      <div className="flex justify-center rounded-lg border bg-muted/40 py-3">
+                        <VotingCountdown target={event.votingOpensAt} label="Opens in" />
+                      </div>
+                    )
+                  )}
                   {elapsedPercent !== null && (
                     <div>
                       <Progress
@@ -216,8 +241,10 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
               <CardContent>
                 <EntityMetadata
                   createdByName={createdByName}
+                  createdByAvatarUrl={createdByAvatarUrl}
                   createdAt={event.createdAt}
                   updatedByName={updatedByName}
+                  updatedByAvatarUrl={updatedByAvatarUrl}
                   updatedAt={event.updatedAt}
                   withAvatar
                 />

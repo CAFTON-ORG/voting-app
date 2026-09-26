@@ -12,6 +12,7 @@ export type AuditRow = {
   action: string;
   eventName: string;
   actorName: string | null;
+  actorAvatarUrl: string | null;
   actorRole: string;
   metadata: Record<string, unknown>;
   createdAt: Date;
@@ -47,7 +48,7 @@ const columns: ColumnDef<AuditRow>[] = [
     cell: ({ row }) =>
       row.original.actorName ? (
         <div className="flex items-center gap-2">
-          <UserAvatar label={row.original.actorName} size="sm" />
+          <UserAvatar label={row.original.actorName} imageUrl={row.original.actorAvatarUrl} size="sm" />
           <div>
             <p className="text-sm">{row.original.actorName}</p>
             <p className="text-xs text-muted-foreground">{row.original.actorRole}</p>
@@ -96,10 +97,14 @@ export function AuditLogTable({ data, actions }: { data: AuditRow[]; actions: st
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+    <DataTable
+      columns={columns}
+      data={filtered}
+      searchPlaceholder="Search audit log…"
+      emptyMessage="No audit entries yet."
+      actions={
         <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -111,13 +116,7 @@ export function AuditLogTable({ data, actions }: { data: AuditRow[]; actions: st
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchPlaceholder="Search audit log…"
-        emptyMessage="No audit entries yet."
-      />
-    </div>
+      }
+    />
   );
 }

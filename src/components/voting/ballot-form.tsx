@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -33,6 +32,7 @@ import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
+import { CandidatePhoto } from "@/components/shared/candidate-photo";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -47,10 +47,12 @@ export function BallotForm({
   event,
   signedInEmail,
   voterName,
+  voterAvatarUrl,
 }: {
   event: EventWithBallot;
   signedInEmail: string;
   voterName?: string | null;
+  voterAvatarUrl?: string | null;
 }) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [step, setStep] = useState<Step>("welcome");
@@ -110,7 +112,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-16">
           <div className="text-center">
             <Badge
@@ -210,7 +212,7 @@ export function BallotForm({
     return (
       <div className="relative flex min-h-svh flex-col">
         <AuroraGlow />
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
           <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
@@ -242,7 +244,7 @@ export function BallotForm({
   if (step === "review") {
     return (
       <div className="flex min-h-svh flex-col">
-        <PublicHeader signedInEmail={signedInEmail} />
+        <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.review} />
           <div className="mx-auto max-w-md">
@@ -257,18 +259,12 @@ export function BallotForm({
                 return (
                   <li key={category.id} className="flex items-center gap-4 rounded-lg border p-3">
                     <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {candidate.photoUrl ? (
-                        <Image src={candidate.photoUrl} alt={candidate.fullName} fill className="object-cover" />
-                      ) : (
-                        <div className="flex size-full items-center justify-center text-lg font-semibold text-muted-foreground">
-                          {candidate.fullName
-                            .split(" ")
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((p) => p[0]?.toUpperCase())
-                            .join("")}
-                        </div>
-                      )}
+                      <CandidatePhoto
+                        photoUrl={candidate.photoUrl}
+                        fullName={candidate.fullName}
+                        sizes="4rem"
+                        initialsClassName="text-lg"
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -331,7 +327,7 @@ export function BallotForm({
 
   return (
     <div className="flex min-h-svh flex-col">
-      <PublicHeader signedInEmail={signedInEmail} />
+      <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 pb-28">
         <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.select} />
         <h1 className="font-heading mt-8 text-xl font-semibold">{event.name}</h1>

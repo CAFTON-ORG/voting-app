@@ -40,6 +40,10 @@ export default async function AdminEventsPage() {
         event.createdById && creatorIdentities.has(event.createdById)
           ? displayName(creatorIdentities.get(event.createdById)!)
           : null,
+      createdByAvatarUrl:
+        event.createdById && creatorIdentities.has(event.createdById)
+          ? (creatorIdentities.get(event.createdById)!.avatarUrl ?? null)
+          : null,
       canDelete:
         can("MANAGE_EVENT_CONFIG") &&
         ((event.state === "DRAFT" || event.state === "SCHEDULED") || (Boolean(event.archivedAt) && votes === 0)),

@@ -1,4 +1,5 @@
 import { PartnerLogos } from "@/components/shared/partner-logos";
+import { CAFTON_WEBSITE_URL } from "@/lib/site";
 
 export function PublicFooter() {
   return (
@@ -7,7 +8,15 @@ export function PublicFooter() {
         <PartnerLogos />
         <div>
           <p className="text-xs text-muted-foreground">
-            Voting Technology Partner — <span className="font-medium text-foreground">CAFTON</span>
+            Voting Technology Partner —{" "}
+            <a
+              href={CAFTON_WEBSITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+            >
+              CAFTON
+            </a>
           </p>
           <p className="text-xs text-muted-foreground">University of Baguio · School of Information Technology</p>
         </div>

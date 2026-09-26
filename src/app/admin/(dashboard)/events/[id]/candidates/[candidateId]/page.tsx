@@ -35,6 +35,10 @@ export default async function CandidateDetailPage(
     candidate.createdById && creatorIdentities.has(candidate.createdById)
       ? displayName(creatorIdentities.get(candidate.createdById)!)
       : null;
+  const createdByAvatarUrl =
+    candidate.createdById && creatorIdentities.has(candidate.createdById)
+      ? (creatorIdentities.get(candidate.createdById)!.avatarUrl ?? null)
+      : null;
 
   const votingEnded = candidate.event.state === "CLOSED" || candidate.event.state === "FINALIZED";
   const votingEverActive = candidate.event.state === "OPEN" || candidate.event.state === "PAUSED";
@@ -104,8 +108,6 @@ export default async function CandidateDetailPage(
                   candidateNumber: candidate.candidateNumber,
                   fullName: candidate.fullName,
                   programYear: candidate.programYear ?? "",
-                  tagline: candidate.tagline ?? "",
-                  bio: candidate.bio ?? "",
                   photoUrl: candidate.photoUrl,
                 }}
               />
@@ -159,7 +161,12 @@ export default async function CandidateDetailPage(
             </CardHeader>
             <CardContent>
               {createdByName ? (
-                <EntityMetadata createdByName={createdByName} createdAt={candidate.createdAt} withAvatar />
+                <EntityMetadata
+                  createdByName={createdByName}
+                  createdByAvatarUrl={createdByAvatarUrl}
+                  createdAt={candidate.createdAt}
+                  withAvatar
+                />
               ) : (
                 <p className="text-xs text-muted-foreground">Added {candidate.createdAt.toLocaleString()}</p>
               )}

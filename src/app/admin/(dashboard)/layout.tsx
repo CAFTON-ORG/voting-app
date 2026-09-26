@@ -73,7 +73,7 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
         <SidebarFooter className="border-t">
           <SidebarMenu>
             <SidebarMenuItem>
-              <NavUser email={admin.email} role={admin.role} />
+              <NavUser email={admin.email} fullName={admin.fullName} avatarUrl={admin.avatarUrl} role={admin.role} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
