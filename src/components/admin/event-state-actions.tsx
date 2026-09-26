@@ -71,9 +71,17 @@ export function EventStateActions({
           </Button>
         )}
         {state === "OPEN" && can("PAUSE_VOTING") && (
-          <Button variant="outline" disabled={pending} onClick={() => run(() => pauseVotingAction(eventId))}>
-            Pause Voting
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button variant="outline" disabled={pending}>
+                Pause Voting
+              </Button>
+            }
+            title="Pause voting for this event?"
+            description="Voters won't be able to submit ballots until you resume voting."
+            confirmLabel="Pause Voting"
+            onConfirm={() => run(() => pauseVotingAction(eventId))}
+          />
         )}
         {state === "PAUSED" && can("RESUME_VOTING") && (
           <Button disabled={pending} onClick={() => run(() => resumeVotingAction(eventId))}>

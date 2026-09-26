@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, ScrollText, type LucideIcon } from "lucide-react";
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 
 type NavItem = { href: string; label: string };
 
@@ -27,6 +27,11 @@ function isActive(pathname: string, href: string): boolean {
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  // On mobile the sidebar is a Sheet overlay (see ui/sidebar.tsx) that
+  // otherwise stays open after tapping a link, covering the page it just
+  // navigated to. Desktop's persistent sidebar has no such "open" state
+  // to close, so this only ever fires on mobile.
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <SidebarMenu>
@@ -35,7 +40,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
         return (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton asChild tooltip={item.label} isActive={isActive(pathname, item.href)}>
-              <Link href={item.href}>
+              <Link href={item.href} onClick={() => isMobile && setOpenMobile(false)}>
                 {Icon && <Icon />}
                 <span>{item.label}</span>
               </Link>
