@@ -77,7 +77,10 @@ export default async function Home() {
               <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <CalendarClock className="size-5" />
               </div>
-              <p className="text-base text-muted-foreground">Voting opens soon. Check back shortly.</p>
+              <div>
+                <p className="text-base font-medium">Voting opens soon.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Check back shortly.</p>
+              </div>
             </Reveal>
           ) : (
             <div className="flex flex-col gap-4">
