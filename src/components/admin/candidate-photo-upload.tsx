@@ -7,9 +7,9 @@ import Image from "next/image";
 import { ImagePlus, Loader2, Pencil, X } from "lucide-react";
 import { cn } from "cn";
 import { uploadCandidatePhotoAction, removeCandidatePhotoAction } from "@/actions/candidates/photo";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/storage/candidate-photo";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 /** A real dropzone — click or drag a file onto the preview itself — rather
  * than a tiny thumbnail next to an unrelated "Upload photo" button. The
@@ -38,7 +38,7 @@ export function CandidatePhotoUpload({
       return;
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setError("Image must be 5MB or smaller.");
+      setError("Image must be 10MB or smaller.");
       return;
     }
     const formData = new FormData();
@@ -142,7 +142,7 @@ export function CandidatePhotoUpload({
           <div className="flex size-full flex-col items-center justify-center gap-2 px-3 text-center text-muted-foreground">
             <ImagePlus className="size-6" />
             <span className="text-xs font-medium">Click or drag to upload</span>
-            <span className="text-[10px]">JPEG, PNG, WebP · up to 5MB</span>
+            <span className="text-[10px]">JPEG, PNG, WebP · up to 10MB</span>
           </div>
         )}
         {pending && (

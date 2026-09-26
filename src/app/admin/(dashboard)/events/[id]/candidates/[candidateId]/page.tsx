@@ -49,11 +49,12 @@ export default async function CandidateDetailPage(
   const canManageFull =
     can("MANAGE_CANDIDATES_FULL") && (candidate.event.state === "DRAFT" || candidate.event.state === "SCHEDULED");
 
-  const categories = await prisma.candidateCategory.findMany({
+  const rawCategories = await prisma.candidateCategory.findMany({
     where: { eventId: id },
-    select: { id: true, name: true },
+    select: { id: true, name: true, _count: { select: { candidates: true } } },
     orderBy: { displayOrder: "asc" },
   });
+  const categories = rawCategories.map((c) => ({ id: c.id, name: c.name, candidateCount: c._count.candidates }));
 
   const categoryTotalVotes = canSeeVotes
     ? await prisma.ballotSelection.count({ where: { categoryId: candidate.categoryId } })

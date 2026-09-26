@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -24,9 +24,11 @@ import {
   updateCandidateLimitedAction,
   updateCandidateStructuralAction,
 } from "@/actions/candidates/mutations";
+import { uploadCandidatePhotoAction } from "@/actions/candidates/photo";
 import { CandidatePhotoUpload } from "@/components/admin/candidate-photo-upload";
+import { CandidatePhotoPicker } from "@/components/admin/candidate-photo-picker";
 
-type CategoryOption = { id: string; name: string };
+type CategoryOption = { id: string; name: string; candidateCount: number };
 
 export type CandidateFormValues = {
   id: string;
@@ -64,8 +66,8 @@ const candidateFormSchema = z.object({
   // create, the number is never asked for, always assigned server-side.
   candidateNumber: z.coerce.number().int().positive("Must be a positive number").optional(),
   fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters"),
-  course: z.string().trim().optional(),
-  yearLevel: z.string().trim().optional(),
+  course: z.string().trim().min(1, "Course is required"),
+  yearLevel: z.string().trim().min(1, "Year level is required"),
 });
 // candidateNumber is z.coerce.number(), so its *input* type (what the raw
 // <input> can hand the resolver, including an in-progress empty string) is
@@ -103,6 +105,11 @@ export function CandidateFormSheet({
 }) {
   const isEdit = Boolean(initialValues);
   const router = useRouter();
+  // Create has no candidateId yet to upload a photo against - the picked
+  // file is held here and only uploaded after createCandidateAction
+  // succeeds and hands back a real id. Edit mode uploads immediately
+  // instead (see CandidatePhotoUpload below), so this is unused there.
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
 
   function defaults(): FormInput {
     const { course, yearLevel } = parseProgramYear(initialValues?.programYear ?? "");
@@ -121,17 +128,33 @@ export function CandidateFormSheet({
     defaultValues: defaults(),
   });
 
+  // Preview-only, for the disabled "Number" field on create - the real
+  // number is always assigned server-side (see nextCandidateNumber() in
+  // the Server Action), so this just shows what it will be, recomputed as
+  // the category selection changes since each category numbers separately.
+  const watchedCategoryId = useWatch({ control: form.control, name: "categoryId" });
+  const selectedCategory = categories.find((c) => c.id === watchedCategoryId);
+  const nextCandidateNumber = (selectedCategory?.candidateCount ?? 0) + 1;
+
   // The same Sheet instance is reused across "add" clicks for different
   // presetCategoryId values and across "edit" clicks for different
   // candidates, so the form must re-sync whenever it opens rather than
   // only on mount.
   useEffect(() => {
-    if (open) form.reset(defaults());
+    if (open) {
+      form.reset(defaults());
+      // react-hook-form's own reset() isn't a plain useState setter the
+      // linter recognizes, but this is the exact same one-time-per-open
+      // sync as that reset - resetting the deferred create-mode photo
+      // pick alongside it, not a reactive derivation of other state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingPhoto(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues?.id]);
 
   async function onSubmit(values: FormOutput) {
-    const programYear = composeProgramYear(values.course ?? "", values.yearLevel ?? "");
+    const programYear = composeProgramYear(values.course, values.yearLevel);
 
     if (isEdit && initialValues) {
       const results = await Promise.all([
@@ -168,6 +191,20 @@ export function CandidateFormSheet({
         form.setError("root", { message: result.message });
         return;
       }
+      if (pendingPhoto) {
+        const formData = new FormData();
+        formData.set("photo", pendingPhoto);
+        const photoResult = await uploadCandidatePhotoAction(result.data.id, formData);
+        if (!photoResult.ok) {
+          // The candidate itself was created successfully - a failed
+          // photo upload shouldn't undo that or block closing the sheet,
+          // just say so; the photo can always be added from the edit form.
+          toast.warning(`Candidate added, but the photo couldn't be uploaded: ${photoResult.message}`);
+          onOpenChange(false);
+          router.refresh();
+          return;
+        }
+      }
       toast.success("Candidate added");
     }
     onOpenChange(false);
@@ -190,12 +227,14 @@ export function CandidateFormSheet({
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-1 flex-col gap-4 px-4">
-              {isEdit && initialValues && (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Photo</Label>
+              <div className="flex flex-col gap-1.5">
+                <Label>Photo</Label>
+                {isEdit && initialValues ? (
                   <CandidatePhotoUpload candidateId={initialValues.id} currentPhotoUrl={initialValues.photoUrl} />
-                </div>
-              )}
+                ) : (
+                  <CandidatePhotoPicker file={pendingPhoto} onChange={setPendingPhoto} />
+                )}
+              </div>
               <div className="flex gap-3">
                 <FormField
                   control={form.control}
@@ -221,7 +260,7 @@ export function CandidateFormSheet({
                     </FormItem>
                   )}
                 />
-                {isEdit && (
+                {isEdit ? (
                   <FormField
                     control={form.control}
                     name="candidateNumber"
@@ -244,6 +283,11 @@ export function CandidateFormSheet({
                       </FormItem>
                     )}
                   />
+                ) : (
+                  <div className="flex w-24 flex-col gap-1.5">
+                    <Label>Number</Label>
+                    <Input disabled value={`#${nextCandidateNumber}`} />
+                  </div>
                 )}
               </div>
               <FormField
@@ -265,8 +309,8 @@ export function CandidateFormSheet({
                   name="course"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Course (optional)</FormLabel>
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                      <FormLabel>Course</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select course" />
@@ -290,7 +334,7 @@ export function CandidateFormSheet({
                   render={({ field }) => (
                     <FormItem className="w-32">
                       <FormLabel>Year level</FormLabel>
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Year" />

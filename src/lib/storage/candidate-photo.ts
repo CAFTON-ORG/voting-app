@@ -5,7 +5,7 @@
 // src/actions/candidates/photo.ts, which is a "use server" Server Action.
 
 export const CANDIDATE_MEDIA_BUCKET = "candidate-media";
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 type AllowedType = { mime: string; ext: string; magic: (bytes: Uint8Array) => boolean };
 
@@ -45,7 +45,7 @@ export class InvalidCandidatePhotoError extends Error {}
  * filename or Content-Type header, both of which are trivially spoofed. */
 export function validateCandidatePhoto(bytes: Uint8Array, sizeBytes: number): { ext: string; mime: string } {
   if (sizeBytes > MAX_FILE_SIZE_BYTES) {
-    throw new InvalidCandidatePhotoError("Image must be 5MB or smaller.");
+    throw new InvalidCandidatePhotoError("Image must be 10MB or smaller.");
   }
   const match = ALLOWED_TYPES.find((type) => type.magic(bytes));
   if (!match) {

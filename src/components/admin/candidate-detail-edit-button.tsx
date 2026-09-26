@@ -12,7 +12,7 @@ export function CandidateDetailEditButton({
   initialValues,
 }: {
   eventId: string;
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; candidateCount: number }[];
   canEditStructural: boolean;
   initialValues: CandidateFormValues;
 }) {
