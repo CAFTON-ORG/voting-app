@@ -63,6 +63,8 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
             votingClosesAt={event.votingClosesAt}
             slug={slug}
             ballotCount={ballotCount}
+            categoryCount={event.categories.length}
+            candidateCount={candidates.length}
           />
         </Reveal>
 

@@ -15,8 +15,11 @@ function formatSchedule(date: Date) {
 
 /** No event has a logo/banner upload today (see the Event model) — rather
  * than add storage-backed branding fields for this pass, the hero gets an
- * elegant generated identity (same color-hash approach as EventAvatar,
- * just larger) so every event still looks intentional, not blank. */
+ * elegant generated identity (same color-hash approach as EventAvatar) so
+ * every event still looks intentional, not blank — and that same color
+ * now washes the whole hero as a soft radial gradient behind the content,
+ * so each event reads as having its own mood instead of an identical
+ * generic banner. */
 export function EventHero({
   name,
   organizer,
@@ -25,6 +28,8 @@ export function EventHero({
   votingClosesAt,
   slug,
   ballotCount,
+  categoryCount,
+  candidateCount,
 }: {
   name: string;
   organizer?: string;
@@ -33,6 +38,8 @@ export function EventHero({
   votingClosesAt: Date | null;
   slug: string;
   ballotCount?: number | null;
+  categoryCount: number;
+  candidateCount: number;
 }) {
   const { bg, fg } = getAvatarColor(name);
   const hasStatusPanel =
@@ -44,13 +51,15 @@ export function EventHero({
     ballotCount != null;
 
   return (
-    <div className="flex flex-col items-center gap-6 px-6 pt-12 pb-8 text-center sm:pt-16">
+    <div className="relative flex flex-col items-center gap-6 overflow-hidden px-6 pt-12 pb-8 text-center sm:pt-16">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
+        style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
+      />
+
       <div className="relative flex items-center justify-center">
-        <div
-          aria-hidden
-          className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28"
-          style={{ backgroundColor: bg }}
-        />
+        <div aria-hidden className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28" style={{ backgroundColor: bg }} />
         <div
           className="relative flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
           style={{ backgroundColor: bg, color: fg }}
@@ -64,10 +73,17 @@ export function EventHero({
         <h1 className="font-heading mt-1 text-3xl font-semibold text-balance sm:text-4xl">{name}</h1>
       </div>
 
-      <VotingStatusBadge state={state} />
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <VotingStatusBadge state={state} />
+        <span aria-hidden className="h-3 w-px bg-border" />
+        <p className="text-xs text-muted-foreground">
+          {categoryCount} categor{categoryCount === 1 ? "y" : "ies"} · {candidateCount} candidate
+          {candidateCount === 1 ? "" : "s"}
+        </p>
+      </div>
 
       {hasStatusPanel && (
-        <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-2xl border bg-card/60 px-6 py-6 shadow-sm">
+        <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-2xl border bg-card/70 px-6 py-6 shadow-sm backdrop-blur-sm">
           {state === "SCHEDULED" && votingOpensAt && (
             <div className="flex flex-col items-center gap-3">
               <p className="text-sm text-muted-foreground">
