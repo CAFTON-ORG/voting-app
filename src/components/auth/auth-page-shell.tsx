@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/shared/logo";
+import { LogoScene } from "@/components/shared/logo-scene";
 import { PartnerLogos } from "@/components/shared/partner-logos";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 
@@ -56,10 +56,8 @@ export function AuthPageShell({
         {backLabel}
       </Link>
       <Card className="w-full max-w-sm rounded-2xl border-border/60 shadow-lg shadow-black/3 dark:shadow-black/20">
-        <CardHeader className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-foreground text-background">
-            <Logo size={22} aria-hidden="true" />
-          </div>
+        <CardHeader className="flex flex-col items-center gap-4 text-center">
+          <LogoScene size={56} />
           <div>
             {eyebrow && (
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{eyebrow}</p>

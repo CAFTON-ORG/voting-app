@@ -27,7 +27,10 @@ export function PublicHeader({
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-2 px-6">
         <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <Logo size={24} aria-hidden="true" />
-          <span className="text-sm font-bold tracking-tight uppercase">Cafton</span>
+          <span className="grid leading-tight">
+            <span className="text-sm font-bold tracking-tight uppercase">Cafton</span>
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Voting</span>
+          </span>
         </Link>
         <div className="flex items-center gap-1">
           <ThemeToggle />
