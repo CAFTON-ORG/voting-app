@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DomainsInput } from "@/components/admin/domains-input";
+import { EventCoverUpload } from "@/components/admin/event-cover-upload";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +83,10 @@ export function EditEventDialog({ event }: { event: Event }) {
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Cover image</Label>
+                <EventCoverUpload eventId={event.id} currentCoverUrl={event.coverImageUrl} />
+              </div>
               <FormField
                 control={form.control}
                 name="name"

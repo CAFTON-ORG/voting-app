@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import Image from "next/image";
+import { Vote } from "lucide-react";
+import { cn } from "cn";
 import { getAvatarColor } from "@/lib/format/avatar-color";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
@@ -13,13 +18,10 @@ function formatSchedule(date: Date) {
   });
 }
 
-/** No event has a logo/banner upload today (see the Event model) — rather
- * than add storage-backed branding fields for this pass, the hero gets an
- * elegant generated identity (same color-hash approach as EventAvatar) so
- * every event still looks intentional, not blank — and that same color
- * now washes the whole hero as a soft radial gradient behind the content,
- * so each event reads as having its own mood instead of an identical
- * generic banner. */
+/** An event with a cover image gets it as a real 21:9 banner (loading
+ * skeleton + fade-in, same pattern as CandidatePhoto); one without falls
+ * back to a generated color identity (same hash as EventAvatar) washed
+ * softly behind the content, so no event ever looks unfinished. */
 export function EventHero({
   name,
   organizer,
@@ -30,6 +32,7 @@ export function EventHero({
   ballotCount,
   categoryCount,
   candidateCount,
+  coverImageUrl,
 }: {
   name: string;
   organizer?: string;
@@ -40,8 +43,10 @@ export function EventHero({
   ballotCount?: number | null;
   categoryCount: number;
   candidateCount: number;
+  coverImageUrl?: string | null;
 }) {
   const { bg, fg } = getAvatarColor(name);
+  const [coverLoaded, setCoverLoaded] = useState(false);
   const hasStatusPanel =
     (state === "SCHEDULED" && votingOpensAt) ||
     (state === "OPEN" && votingClosesAt) ||
@@ -52,21 +57,38 @@ export function EventHero({
 
   return (
     <div className="relative flex flex-col items-center gap-6 overflow-hidden px-6 pt-12 pb-8 text-center sm:pt-16">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
-        style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
-      />
-
-      <div className="relative flex items-center justify-center">
-        <div aria-hidden className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28" style={{ backgroundColor: bg }} />
+      {!coverImageUrl && (
         <div
-          className="relative flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
-          style={{ backgroundColor: bg, color: fg }}
-        >
-          <CalendarDays className="size-8 sm:size-9" />
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
+          style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
+        />
+      )}
+
+      {coverImageUrl ? (
+        <div className="relative aspect-21/9 w-full max-w-2xl overflow-hidden rounded-3xl bg-muted shadow-lg">
+          <Image
+            src={coverImageUrl}
+            alt=""
+            fill
+            priority
+            sizes="(min-width: 672px) 42rem, 100vw"
+            onLoad={() => setCoverLoaded(true)}
+            className={cn("object-cover transition-opacity duration-300", coverLoaded ? "opacity-100" : "opacity-0")}
+          />
+          {!coverLoaded && <div aria-hidden className="absolute inset-0 animate-pulse bg-muted" />}
         </div>
-      </div>
+      ) : (
+        <div className="relative flex items-center justify-center">
+          <div aria-hidden className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28" style={{ backgroundColor: bg }} />
+          <div
+            className="relative flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
+            style={{ backgroundColor: bg, color: fg }}
+          >
+            <Vote className="size-8 sm:size-9" />
+          </div>
+        </div>
+      )}
 
       <div>
         {organizer && <p className="text-sm font-medium text-muted-foreground">{organizer}</p>}
@@ -113,8 +135,11 @@ export function EventHero({
           )}
 
           {state === "OPEN" && (
-            <Button asChild size="lg" className="w-full">
-              <Link href={`/events/${slug}/vote`}>Vote Now</Link>
+            <Button asChild size="lg" className="w-full gap-2">
+              <Link href={`/events/${slug}/vote`}>
+                <Vote className="size-4" />
+                Vote Now
+              </Link>
             </Button>
           )}
 

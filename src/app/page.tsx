@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -38,6 +39,7 @@ type HomeEvent = {
   slug: string;
   name: string;
   state: EventState;
+  coverImageUrl: string | null;
   candidates: { id: string; fullName: string; photoUrl: string | null }[];
 };
 
@@ -104,6 +106,11 @@ function EventCard({ event, delayMs }: { event: HomeEvent; delayMs: number }) {
           aria-hidden
           className={cn("absolute inset-y-0 left-0 w-1", isOpen ? "bg-green-500 dark:bg-green-400" : "bg-border")}
         />
+        {event.coverImageUrl && (
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-16">
+            <Image src={event.coverImageUrl} alt="" fill sizes="4rem" className="object-cover" />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="font-heading truncate text-xl font-medium sm:text-2xl">{event.name}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
