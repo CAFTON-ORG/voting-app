@@ -2,6 +2,19 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
+    // Next's client-side router cache otherwise reuses a dynamic page's
+    // last render for up to 30s on back/forward navigation - so a voter
+    // who submits a ballot and then hits Back could be shown the same
+    // "cast your vote" form they just used, even though a real resubmit
+    // is correctly rejected server-side (the cache only affects what's
+    // painted, never the actual authorization check). Zero disables that
+    // reuse for every dynamic route, so "have I already voted"/"is this
+    // still open" is always re-checked fresh - worth the small perceived-
+    // speed cost everywhere else for an app where stale state like that
+    // is actively misleading, not just a minor staleness.
+    staleTimes: {
+      dynamic: 0,
+    },
     serverActions: {
       // Next's default Server Action body limit is 1MB - well under
       // validateCandidatePhoto's own 10MB cap (src/lib/storage/candidate-photo.ts),

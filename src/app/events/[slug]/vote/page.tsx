@@ -4,6 +4,7 @@ import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { formatSchedule } from "@/lib/format/datetime";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
@@ -27,12 +28,21 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
     );
   }
 
-  const redirectTo = `/events/${slug}/vote`;
-  const signedInFooter = <SignedInBar email={identity.email} redirectTo={redirectTo} />;
-
   if (!isAllowedVoterEmail(identity.email, event.allowedDomains)) {
+    // AuthPageShell has no site header/account menu of its own (it's also
+    // used pre-sign-in, where there's no identity to show one for) - this
+    // is the one branch here where SignedInBar's sign-out link is the only
+    // way out for a signed-in-but-ineligible voter, so it stays. Every
+    // other branch below renders through VotingUnavailableState, which
+    // does have PublicHeader's own account menu, making a second sign-out
+    // link here redundant - see NavUserPopover.
+    const redirectTo = `/events/${slug}/vote`;
     return (
-      <AuthPageShell title={event.name} footer={signedInFooter} backHref={`/events/${slug}`}>
+      <AuthPageShell
+        title={event.name}
+        footer={<SignedInBar email={identity.email} redirectTo={redirectTo} />}
+        backHref={`/events/${slug}`}
+      >
         <Alert variant="destructive">
           <AlertTitle>Not eligible</AlertTitle>
           <AlertDescription>
@@ -52,10 +62,9 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Voting hasn't opened yet."
         description={
           event.votingOpensAt
-            ? `Voting begins ${event.votingOpensAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}.`
+            ? `Voting begins ${formatSchedule(event.votingOpensAt)}.`
             : undefined
         }
-        footer={signedInFooter}
         signedInEmail={identity.email}
         signedInName={identity.fullName}
         signedInAvatarUrl={identity.avatarUrl}
@@ -72,7 +81,6 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         tone="warning"
         title="Voting is temporarily paused."
         description="Please check back shortly."
-        footer={signedInFooter}
         signedInEmail={identity.email}
         signedInName={identity.fullName}
         signedInAvatarUrl={identity.avatarUrl}
@@ -87,10 +95,9 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         title="Voting has ended."
         description={
           event.votingClosesAt
-            ? `Voting closed on ${event.votingClosesAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}.`
+            ? `Voting closed on ${formatSchedule(event.votingClosesAt)}.`
             : "Thank you to everyone who participated."
         }
-        footer={signedInFooter}
         signedInEmail={identity.email}
         signedInName={identity.fullName}
         signedInAvatarUrl={identity.avatarUrl}
@@ -106,7 +113,6 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
         tone="success"
         title="Vote already submitted"
         description="Your vote for this event has already been recorded. Thank you for participating."
-        footer={signedInFooter}
         signedInEmail={identity.email}
         signedInName={identity.fullName}
         signedInAvatarUrl={identity.avatarUrl}

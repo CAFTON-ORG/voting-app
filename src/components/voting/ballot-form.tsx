@@ -30,9 +30,9 @@ import { VotingProgress } from "./voting-progress";
 import { BallotCategorySection } from "./ballot-category-section";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
 import { PublicHeader } from "@/components/voting/public-header";
-import { PublicFooter } from "@/components/voting/public-footer";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { CandidatePhoto } from "@/components/shared/candidate-photo";
+import { formatDateTime } from "@/lib/format/datetime";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -163,7 +163,6 @@ export function BallotForm({
             </p>
           </div>
         </main>
-        <PublicFooter />
 
         <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
           <DialogContent className="sm:max-w-md">
@@ -229,14 +228,13 @@ export function BallotForm({
               </div>
             )}
             <p className="mt-4 text-xs text-muted-foreground">
-              Submitted {new Date(submittedAt).toLocaleString()}
+              Submitted {formatDateTime(new Date(submittedAt))}
             </p>
             <Button asChild variant="outline" className="mt-8">
               <a href={`/events/${event.slug}`}>Return to Event</a>
             </Button>
           </div>
         </main>
-        <PublicFooter />
       </div>
     );
   }
@@ -287,7 +285,6 @@ export function BallotForm({
             {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
           </div>
         </main>
-        <PublicFooter />
 
         <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
           <div className="mx-auto flex w-full max-w-md gap-2">
@@ -350,7 +347,6 @@ export function BallotForm({
           ))}
         </div>
       </main>
-      <PublicFooter />
 
       <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">

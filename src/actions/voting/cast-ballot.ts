@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { castBallotSchema, type CastBallotInput } from "@/lib/validation/voting";
+import { castBallotLimiter, checkRateLimit } from "@/lib/rate-limit/client";
 import { pgErrorCode, ERROR_MESSAGES } from "./errors";
 
 export type CastBallotResult =
@@ -43,6 +44,19 @@ export async function castBallotAction(input: CastBallotInput): Promise<CastBall
   }
   if (!isAllowedVoterEmail(identity.email, event.allowedDomains)) {
     return { ok: false, message: "Your account is not eligible to vote in this event." };
+  }
+
+  // Keyed by the trusted server-verified identity + event, never a
+  // client-submitted value or bare IP (which could be an entire campus
+  // NAT) - a real duplicate vote is already impossible regardless (see
+  // cast_ballot()'s own unique constraint), this is purely about not
+  // letting a script hammer this endpoint with repeated attempts.
+  const rateLimit = await checkRateLimit(castBallotLimiter, `${identity.authUserId}:${event.id}`);
+  if (!rateLimit.allowed) {
+    return {
+      ok: false,
+      message: `Too many attempts. Please wait about ${Math.ceil(rateLimit.retryAfterSeconds / 60)} minute(s) and try again.`,
+    };
   }
 
   try {
