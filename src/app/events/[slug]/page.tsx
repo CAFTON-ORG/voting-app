@@ -41,7 +41,9 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
       candidateNumber: candidate.candidateNumber,
       fullName: candidate.fullName,
       photoUrl: candidate.photoUrl,
+      programYear: candidate.programYear,
       tagline: candidate.tagline,
+      bio: candidate.bio,
       categoryName: category.name,
     }))
   );
@@ -66,6 +68,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
             ballotCount={ballotCount}
             categoryCount={event.categories.length}
             candidateCount={candidates.length}
+            coverImageUrl={event.coverImageUrl}
           />
         </Reveal>
 

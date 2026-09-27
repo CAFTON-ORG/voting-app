@@ -4,13 +4,16 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { CandidatePhoto } from "@/components/shared/candidate-photo";
+import { CandidateProfileSheet } from "./candidate-profile-sheet";
 
 type PreviewCandidate = {
   id: string;
   candidateNumber: number;
   fullName: string;
   photoUrl: string | null;
+  programYear: string | null;
   tagline: string | null;
+  bio: string | null;
   categoryName: string;
 };
 
@@ -26,9 +29,13 @@ const SEARCH_THRESHOLD = 9;
  * the ballot form's selection grid (this is browsing, not choosing, so it
  * never needs the RadioGroup/selected-state machinery). Owns no page-level
  * heading of its own - the caller wraps this in its own SectionHeader, the
- * same pattern used everywhere else on the public site. */
+ * same pattern used everywhere else on the public site. Clicking a photo
+ * opens the same CandidateProfileSheet the ballot flow uses to show a full
+ * profile - passed with no onSelect, which already makes it render as
+ * pure read-only browsing (no "select this candidate" footer). */
 export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandidate[] }) {
   const [search, setSearch] = useState("");
+  const [openCandidate, setOpenCandidate] = useState<PreviewCandidate | null>(null);
 
   const filtered =
     search.trim().length === 0
@@ -65,7 +72,7 @@ export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandid
       {categories.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">No candidates match &quot;{search}&quot;.</p>
       ) : (
-        categories.map((category) => (
+        categories.map((category, categoryIndex) => (
           <div key={category.name} className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <h3 className="font-heading shrink-0 text-base font-semibold">{category.name}</h3>
@@ -75,25 +82,40 @@ export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandid
               </span>
             </div>
             <div className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-6 pb-2 scroll-px-6">
-              {category.candidates.map((candidate) => (
-                <div key={candidate.id} className="group flex w-36 shrink-0 snap-start flex-col gap-3 sm:w-44">
+              {category.candidates.map((candidate, candidateIndex) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => setOpenCandidate(candidate)}
+                  className="group flex w-36 shrink-0 snap-start flex-col gap-3 text-left sm:w-44"
+                >
                   <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl bg-muted shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-md">
                     <CandidatePhoto
                       photoUrl={candidate.photoUrl}
                       fullName={candidate.fullName}
                       sizes="(min-width: 640px) 11rem, 9rem"
+                      // The very first photo on the page is this page's
+                      // LCP element - lazy-loading it (next/image's
+                      // default) is exactly backwards for that one image.
+                      priority={categoryIndex === 0 && candidateIndex === 0}
                     />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">#{candidate.candidateNumber}</p>
                     <p className="font-heading truncate font-medium">{candidate.fullName}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
         ))
       )}
+
+      <CandidateProfileSheet
+        candidate={openCandidate}
+        open={openCandidate !== null}
+        onOpenChange={(open) => !open && setOpenCandidate(null)}
+      />
     </div>
   );
 }

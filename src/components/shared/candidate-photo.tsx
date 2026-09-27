@@ -25,12 +25,18 @@ export function CandidatePhoto({
   sizes,
   className,
   initialsClassName = "text-3xl",
+  priority = false,
 }: {
   photoUrl: string | null;
   fullName: string;
   sizes: string;
   className?: string;
   initialsClassName?: string;
+  /** Pass true for whichever photo actually renders above the fold (e.g.
+   * the first candidate in the first category on the event page) - Next
+   * otherwise lazy-loads it like every other image, which is exactly
+   * backwards for the one image that's also the page's LCP element. */
+  priority?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
 
@@ -54,6 +60,7 @@ export function CandidatePhoto({
         alt={fullName}
         fill
         sizes={sizes}
+        priority={priority}
         onLoad={() => setLoaded(true)}
         className={cn("object-cover transition-opacity duration-300", loaded ? "opacity-100" : "opacity-0", className)}
       />
