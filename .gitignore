@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local tooling - installed/downloaded skill packages (their own
+# bundled scripts, often JS/Python) are machine-local tooling, not part of
+# this app's source. Committing them previously dragged GitHub's language
+# stats toward JavaScript despite the actual app being all TypeScript.
+.claude/

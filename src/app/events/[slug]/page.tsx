@@ -9,6 +9,7 @@ import { EventHero } from "@/components/voting/event-hero";
 import { CandidatePreviewGrid } from "@/components/voting/candidate-preview-grid";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { Reveal } from "@/components/shared/reveal";
+import { SectionHeader } from "@/components/shared/section-header";
 
 /** Public event page. Deliberately shows only a total ballot count (and
  * only when the event owner enabled it) — never candidate-level totals,
@@ -40,7 +41,9 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
       candidateNumber: candidate.candidateNumber,
       fullName: candidate.fullName,
       photoUrl: candidate.photoUrl,
+      programYear: candidate.programYear,
       tagline: candidate.tagline,
+      bio: candidate.bio,
       categoryName: category.name,
     }))
   );
@@ -53,7 +56,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
         signedInName={identity?.fullName}
         signedInAvatarUrl={identity?.avatarUrl}
       />
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-16 px-6 pb-16">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 pb-16">
         <Reveal>
           <EventHero
             name={event.name}
@@ -63,24 +66,25 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
             votingClosesAt={event.votingClosesAt}
             slug={slug}
             ballotCount={ballotCount}
+            categoryCount={event.categories.length}
+            candidateCount={candidates.length}
+            coverImageUrl={event.coverImageUrl}
           />
         </Reveal>
 
-        <Reveal delayMs={150}>
+        <Reveal delayMs={150} className="border-t pt-14">
+          <SectionHeader
+            label="Meet the Candidates"
+            count={candidates.length > 0 ? candidates.length : undefined}
+          />
           {event.categories.length === 0 ? (
-            <>
-              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Voting categories haven&apos;t been configured yet.
-              </p>
-            </>
+            <p className="text-center text-sm text-muted-foreground">
+              Voting categories haven&apos;t been configured yet.
+            </p>
           ) : candidates.length === 0 ? (
-            <>
-              <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Candidates haven&apos;t been announced yet.
-              </p>
-            </>
+            <p className="text-center text-sm text-muted-foreground">
+              Candidates haven&apos;t been announced yet.
+            </p>
           ) : (
             <CandidatePreviewGrid candidates={candidates} />
           )}

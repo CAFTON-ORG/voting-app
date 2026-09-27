@@ -58,6 +58,10 @@ model Event {
   allowedDomains        String[]        @map("allowed_domains")
   state                 EventState      @default(DRAFT)
   showPublicBallotCount Boolean         @default(true) @map("show_public_ballot_count")
+  // Optional banner shown on the event's own hero and its card on the
+  // home page - falls back to a generated color identity (see EventHero)
+  // when null, so an event never looks unfinished for lacking one.
+  coverImageUrl         String?         @map("cover_image_url")
   votingOpensAt         DateTime?       @map("voting_opens_at") @db.Timestamptz(3)
   votingClosesAt        DateTime?       @map("voting_closes_at") @db.Timestamptz(3)
   finalizedAt           DateTime?       @map("finalized_at") @db.Timestamptz(3)

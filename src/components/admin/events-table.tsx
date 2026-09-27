@@ -11,6 +11,7 @@ import { DataTable, SortableHeader } from "@/components/admin/data-table";
 import { ArchiveEventButton } from "@/components/admin/archive-event-button";
 import { DeleteEventButton } from "@/components/admin/delete-event-button";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,21 +90,29 @@ const columns: ColumnDef<EventRow>[] = [
     id: "actions",
     header: () => <div className="text-right">Actions</div>,
     cell: ({ row }) => (
-      <div className="flex justify-end gap-2">
-        <Button asChild variant="ghost" size="icon" className="size-8">
-          <Link href={`/admin/events/${row.original.id}`}>
-            <Eye className="size-4" />
-            <span className="sr-only">View</span>
-          </Link>
-        </Button>
+      <div className="flex justify-end gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="ghost" size="icon" className="size-8">
+              <Link href={`/admin/events/${row.original.id}`}>
+                <Eye className="size-4" />
+                <span className="sr-only">View</span>
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View</TooltipContent>
+        </Tooltip>
         {row.original.canArchive && (
           <ArchiveEventButton
             eventId={row.original.id}
             eventName={row.original.name}
             archived={row.original.archived}
+            iconOnly
           />
         )}
-        {row.original.canDelete && <DeleteEventButton eventId={row.original.id} eventName={row.original.name} />}
+        {row.original.canDelete && (
+          <DeleteEventButton eventId={row.original.id} eventName={row.original.name} iconOnly />
+        )}
       </div>
     ),
   },

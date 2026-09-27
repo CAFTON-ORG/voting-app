@@ -33,7 +33,7 @@ export function renderAdminInviteEmail({
   const safeRole = escapeHtml(role);
   const roleDescription = ROLE_DESCRIPTIONS[role] ?? "";
 
-  const subject = "You've been invited to the Mr. & Ms. SIT admin team";
+  const subject = "You've been invited to the Cafton Voting admin team";
 
   const html = `
 <!DOCTYPE html>
@@ -64,7 +64,7 @@ export function renderAdminInviteEmail({
                   You've been invited
                 </h1>
                 <p style="margin:0; font-size:14px; color:#52525b; line-height:1.5;">
-                  ${safeName} invited you to join the Mr. &amp; Ms. SIT admin team.
+                  ${safeName} invited you to join the Cafton Voting admin team.
                 </p>
               </td>
             </tr>
@@ -118,7 +118,7 @@ export function renderAdminInviteEmail({
 `.trim();
 
   const text = [
-    `${inviterName} invited you to join the Mr. & Ms. SIT admin team as ${role}.`,
+    `${inviterName} invited you to join the Cafton Voting admin team as ${role}.`,
     roleDescription,
     "",
     `Accept the invitation: ${acceptUrl}`,
