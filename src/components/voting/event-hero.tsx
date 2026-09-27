@@ -18,10 +18,16 @@ function formatSchedule(date: Date) {
   });
 }
 
-/** An event with a cover image gets it as a real 21:9 banner (loading
- * skeleton + fade-in, same pattern as CandidatePhoto); one without falls
- * back to a generated color identity (same hash as EventAvatar) washed
- * softly behind the content, so no event ever looks unfinished. */
+/** An event with a cover image gets a real full-bleed banner - name and
+ * status overlaid directly on the photo via a bottom scrim, the way a
+ * cover photo is actually supposed to work (Facebook/YouTube-style),
+ * rather than a small image floating above separate text. `-mx-6`
+ * deliberately breaks out of the page's own px-6 side padding so the
+ * banner reaches the same edges the sticky header does, at every
+ * breakpoint (the page's padding is a flat px-6 with no sm:/lg: bump, so
+ * this stays correct on mobile too). No cover means no image at all -
+ * organizer/title/status just sit on the existing soft gradient wash,
+ * with no icon standing in for a missing photo. */
 export function EventHero({
   name,
   organizer,
@@ -45,7 +51,7 @@ export function EventHero({
   candidateCount: number;
   coverImageUrl?: string | null;
 }) {
-  const { bg, fg } = getAvatarColor(name);
+  const { bg } = getAvatarColor(name);
   const [coverLoaded, setCoverLoaded] = useState(false);
   const hasStatusPanel =
     (state === "SCHEDULED" && votingOpensAt) ||
@@ -56,53 +62,45 @@ export function EventHero({
     ballotCount != null;
 
   return (
-    <div className="relative flex flex-col items-center gap-6 overflow-hidden px-6 pt-12 pb-8 text-center sm:pt-16">
-      {!coverImageUrl && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
-          style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
-        />
-      )}
-
+    <div className="relative flex flex-col items-center gap-6 pt-8 pb-8 text-center sm:pt-10">
       {coverImageUrl ? (
-        <div className="relative aspect-21/9 w-full max-w-2xl overflow-hidden rounded-3xl bg-muted shadow-lg">
+        <div className="relative -mx-6 aspect-21/9 w-[calc(100%+3rem)] overflow-hidden bg-muted sm:aspect-3/1">
           <Image
             src={coverImageUrl}
             alt=""
             fill
             priority
-            sizes="(min-width: 672px) 42rem, 100vw"
+            sizes="100vw"
             onLoad={() => setCoverLoaded(true)}
             className={cn("object-cover transition-opacity duration-300", coverLoaded ? "opacity-100" : "opacity-0")}
           />
           {!coverLoaded && <div aria-hidden className="absolute inset-0 animate-pulse bg-muted" />}
-        </div>
-      ) : (
-        <div className="relative flex items-center justify-center">
-          <div aria-hidden className="absolute size-24 rounded-full opacity-40 blur-2xl sm:size-28" style={{ backgroundColor: bg }} />
-          <div
-            className="relative flex size-16 items-center justify-center rounded-2xl shadow-lg sm:size-20"
-            style={{ backgroundColor: bg, color: fg }}
-          >
-            <Vote className="size-8 sm:size-9" />
+          <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">
+            {organizer && <p className="text-sm font-medium text-white/80">{organizer}</p>}
+            <h1 className="font-heading text-2xl font-semibold text-balance text-white sm:text-4xl">{name}</h1>
+            <VotingStatusBadge state={state} />
           </div>
         </div>
+      ) : (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
+            style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
+          />
+          <div>
+            {organizer && <p className="text-sm font-medium text-muted-foreground">{organizer}</p>}
+            <h1 className="font-heading mt-1 text-3xl font-semibold text-balance sm:text-4xl">{name}</h1>
+          </div>
+          <VotingStatusBadge state={state} />
+        </>
       )}
 
-      <div>
-        {organizer && <p className="text-sm font-medium text-muted-foreground">{organizer}</p>}
-        <h1 className="font-heading mt-1 text-3xl font-semibold text-balance sm:text-4xl">{name}</h1>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <VotingStatusBadge state={state} />
-        <span aria-hidden className="h-3 w-px bg-border" />
-        <p className="text-xs text-muted-foreground">
-          {categoryCount} categor{categoryCount === 1 ? "y" : "ies"} · {candidateCount} candidate
-          {candidateCount === 1 ? "" : "s"}
-        </p>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        {categoryCount} categor{categoryCount === 1 ? "y" : "ies"} · {candidateCount} candidate
+        {candidateCount === 1 ? "" : "s"}
+      </p>
 
       {hasStatusPanel && (
         <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-2xl border bg-card/70 px-6 py-6 shadow-sm backdrop-blur-sm">
