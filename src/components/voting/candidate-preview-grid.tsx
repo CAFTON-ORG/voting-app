@@ -24,7 +24,9 @@ const SEARCH_THRESHOLD = 9;
  * section rather than something to spot by scanning captions. Separate
  * from the admin CandidateCard (no edit actions, no admin data) and from
  * the ballot form's selection grid (this is browsing, not choosing, so it
- * never needs the RadioGroup/selected-state machinery). */
+ * never needs the RadioGroup/selected-state machinery). Owns no page-level
+ * heading of its own - the caller wraps this in its own SectionHeader, the
+ * same pattern used everywhere else on the public site. */
 export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandidate[] }) {
   const [search, setSearch] = useState("");
 
@@ -48,20 +50,17 @@ export function CandidatePreviewGrid({ candidates }: { candidates: PreviewCandid
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-heading text-xl font-semibold">Meet the Candidates</h2>
-        {candidates.length > SEARCH_THRESHOLD && (
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search candidates…"
-              className="pl-8"
-            />
-          </div>
-        )}
-      </div>
+      {candidates.length > SEARCH_THRESHOLD && (
+        <div className="relative w-full max-w-xs sm:ml-auto">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search candidates…"
+            className="pl-8"
+          />
+        </div>
+      )}
 
       {categories.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">No candidates match &quot;{search}&quot;.</p>
