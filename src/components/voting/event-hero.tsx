@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Vote } from "lucide-react";
 import { cn } from "cn";
 import { getAvatarColor } from "@/lib/format/avatar-color";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
@@ -18,16 +17,25 @@ function formatSchedule(date: Date) {
   });
 }
 
-/** An event with a cover image gets a real full-bleed banner - name and
- * status overlaid directly on the photo via a bottom scrim, the way a
- * cover photo is actually supposed to work (Facebook/YouTube-style),
- * rather than a small image floating above separate text. `-mx-6`
- * deliberately breaks out of the page's own px-6 side padding so the
- * banner reaches the same edges the sticky header does, at every
- * breakpoint (the page's padding is a flat px-6 with no sm:/lg: bump, so
- * this stays correct on mobile too). No cover means no image at all -
- * organizer/title/status just sit on the existing soft gradient wash,
- * with no icon standing in for a missing photo. */
+/** An event with a cover image gets a real banner - name and status
+ * overlaid directly on the photo via a bottom scrim, the way a cover photo
+ * is actually supposed to work (Facebook/YouTube-style), rather than a
+ * small image floating above separate text. Rendered as a rounded card
+ * within the page's own side padding, not broken out edge-to-edge - once
+ * the banner has rounded corners, sitting flush against the viewport edge
+ * on mobile just reads as the image being cut off, not as an intentional
+ * full-bleed treatment. No cover still gets the same rounded banner box,
+ * scrim, and white overlaid text - just with the event's generated color
+ * wash in place of a photo - instead of falling back to plain page-
+ * background text with no box at all, so every event has a consistent
+ * banner shape whether or not it has a real cover photo.
+ *
+ * The cover itself renders twice, stacked: a blurred, zoomed copy fills
+ * the whole frame edge-to-edge as a backdrop (purely decorative), and the
+ * real photo sits on top at `object-contain` — so whatever the source
+ * image's own aspect ratio is, none of it is ever cropped, while the
+ * banner still always fills its full width with no visible letterboxing.
+ * Same technique Spotify/Apple Music use for oddly-shaped cover art. */
 export function EventHero({
   name,
   organizer,
@@ -64,7 +72,16 @@ export function EventHero({
   return (
     <div className="relative flex flex-col items-center gap-6 pt-8 pb-8 text-center sm:pt-10">
       {coverImageUrl ? (
-        <div className="relative -mx-6 aspect-21/9 w-[calc(100%+3rem)] overflow-hidden bg-muted sm:aspect-3/1">
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted sm:aspect-2/1">
+          <Image
+            src={coverImageUrl}
+            alt=""
+            fill
+            aria-hidden
+            sizes="100vw"
+            className="scale-125 object-cover opacity-70 blur-2xl"
+          />
+          <div aria-hidden className="absolute inset-0 bg-background/40" />
           <Image
             src={coverImageUrl}
             alt=""
@@ -72,10 +89,13 @@ export function EventHero({
             priority
             sizes="100vw"
             onLoad={() => setCoverLoaded(true)}
-            className={cn("object-cover transition-opacity duration-300", coverLoaded ? "opacity-100" : "opacity-0")}
+            className={cn("object-contain transition-opacity duration-300", coverLoaded ? "opacity-100" : "opacity-0")}
           />
           {!coverLoaded && <div aria-hidden className="absolute inset-0 animate-pulse bg-muted" />}
-          <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/80 via-black/25 to-transparent"
+          />
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">
             {organizer && <p className="text-sm font-medium text-white/80">{organizer}</p>}
             <h1 className="font-heading text-2xl font-semibold text-balance text-white sm:text-4xl">{name}</h1>
@@ -83,18 +103,19 @@ export function EventHero({
           </div>
         </div>
       ) : (
-        <>
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted sm:aspect-2/1">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-[0.15]"
-            style={{ background: `radial-gradient(closest-side, ${bg}, transparent 70%)` }}
+            className="absolute inset-0"
+            style={{ background: `radial-gradient(circle at 30% 20%, ${bg}, transparent 65%)` }}
           />
-          <div>
-            {organizer && <p className="text-sm font-medium text-muted-foreground">{organizer}</p>}
-            <h1 className="font-heading mt-1 text-3xl font-semibold text-balance sm:text-4xl">{name}</h1>
+          <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">
+            {organizer && <p className="text-sm font-medium text-white/80">{organizer}</p>}
+            <h1 className="font-heading text-2xl font-semibold text-balance text-white sm:text-4xl">{name}</h1>
+            <VotingStatusBadge state={state} />
           </div>
-          <VotingStatusBadge state={state} />
-        </>
+        </div>
       )}
 
       <p className="text-xs text-muted-foreground">
@@ -134,10 +155,7 @@ export function EventHero({
 
           {state === "OPEN" && (
             <Button asChild size="lg" className="w-full gap-2">
-              <Link href={`/events/${slug}/vote`}>
-                <Vote className="size-4" />
-                Vote Now
-              </Link>
+              <Link href={`/events/${slug}/vote`}>Vote Now</Link>
             </Button>
           )}
 
