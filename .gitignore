@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# load-test run artifacts - k6 summaries and generated reports, regenerated
+# per run, never meant to be committed (see docs/load-testing.md)
+/load-test/results/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
