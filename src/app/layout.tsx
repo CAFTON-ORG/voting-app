@@ -21,9 +21,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Mr. & Ms. SIT — Netizen's Choice",
+  title: "Cafton Voting",
   description:
-    "Vote for Mr. & Ms. SIT using your University of Baguio account. A voting platform provided by Cafton Software Development Services as Technology Sponsor.",
+    "Secure, one-account-one-vote elections for University of Baguio, provided by Cafton Software Development Services.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
