@@ -11,7 +11,7 @@
 //     -e VUS=500 -e DURATION=3m
 import http from "k6/http";
 import { check, sleep } from "k6";
-import { BASE_URL, EVENT_SLUG, VOTER_DOMAIN, VOTER_POOL_SIZE, authHeaders } from "./config.js";
+import { BASE_URL, EVENT_SLUG, VOTER_DOMAIN, VOTER_POOL_SIZE, authHeaders, vercelBypassHeaders } from "./config.js";
 import {
   publicReadDuration,
   authLoginDuration,
@@ -130,7 +130,10 @@ export function votingFlow(eventInfo) {
   const email = pickVoterEmail();
   if (!login(email)) return;
 
-  const pageRes = http.get(`${BASE_URL}/events/${EVENT_SLUG}/vote`, { tags: { name: "vote_page" } });
+  const pageRes = http.get(`${BASE_URL}/events/${EVENT_SLUG}/vote`, {
+    headers: vercelBypassHeaders(),
+    tags: { name: "vote_page" },
+  });
   votePageDuration.add(pageRes.timings.duration);
   if (!check(pageRes, { "vote page loaded": (r) => r.status === 200 })) {
     hardErrors.add(1, { type: "vote_page" });
@@ -153,13 +156,16 @@ export function votingFlow(eventInfo) {
  * volume, lowest-cost request pattern, and the one src/lib/events/public-
  * queries.ts's caching is specifically meant to absorb. */
 export function publicReads() {
-  const homeRes = http.get(`${BASE_URL}/`, { tags: { name: "home" } });
+  const homeRes = http.get(`${BASE_URL}/`, { headers: vercelBypassHeaders(), tags: { name: "home" } });
   publicReadDuration.add(homeRes.timings.duration);
   if (!check(homeRes, { "home loaded": (r) => r.status === 200 })) hardErrors.add(1, { type: "home" });
 
   sleep(Math.random() * 2);
 
-  const eventRes = http.get(`${BASE_URL}/events/${EVENT_SLUG}`, { tags: { name: "event_page" } });
+  const eventRes = http.get(`${BASE_URL}/events/${EVENT_SLUG}`, {
+    headers: vercelBypassHeaders(),
+    tags: { name: "event_page" },
+  });
   publicReadDuration.add(eventRes.timings.duration);
   if (!check(eventRes, { "event page loaded": (r) => r.status === 200 })) hardErrors.add(1, { type: "event_page" });
 
