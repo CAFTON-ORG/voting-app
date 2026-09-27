@@ -72,7 +72,7 @@ export function EditEventDialog({ event }: { event: Event }) {
           Edit
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
@@ -82,50 +82,52 @@ export function EditEventDialog({ event }: { event: Event }) {
                 results are finalized.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4 py-4">
+            <div className="grid gap-6 py-4 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label>Cover image</Label>
                 <EventCoverUpload eventId={event.id} currentCoverUrl={event.coverImageUrl} />
               </div>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="allowedDomains"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Allowed voter domains</FormLabel>
-                    <FormControl>
-                      <DomainsInput value={field.value} onChange={field.onChange} placeholder="s.ubaguio.edu" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="showPublicBallotCount"
-                render={({ field }) => (
-                  <FormItem className="flex-row items-center justify-between">
-                    <FormLabel>Show public ballot count</FormLabel>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="flex flex-col gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="allowedDomains"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Allowed voter domains</FormLabel>
+                      <FormControl>
+                        <DomainsInput value={field.value} onChange={field.onChange} placeholder="s.ubaguio.edu" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="showPublicBallotCount"
+                  render={({ field }) => (
+                    <FormItem className="flex-row items-center justify-between">
+                      <FormLabel>Show public ballot count</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive md:col-span-2">{error}</p>}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

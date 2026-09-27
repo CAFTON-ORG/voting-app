@@ -87,7 +87,8 @@ export async function uploadEventCoverAction(
     revalidatePath("/");
 
     return ok({ url: publicUrl });
-  } catch {
+  } catch (err) {
+    console.error("uploadEventCoverAction failed:", err);
     return fail("Could not upload the cover image. Please try again.");
   }
 }
@@ -124,7 +125,8 @@ export async function removeEventCoverAction(eventId: string): Promise<ActionRes
     revalidatePath("/");
 
     return ok(undefined);
-  } catch {
+  } catch (err) {
+    console.error("removeEventCoverAction failed:", err);
     return fail("Could not remove the cover image. Please try again.");
   }
 }
