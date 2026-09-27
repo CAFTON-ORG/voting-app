@@ -12,6 +12,7 @@ import { CandidateLifecycleActions } from "@/components/admin/candidate-lifecycl
 import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getPercentageColor } from "@/lib/format/progress-color";
+import { formatDateTime } from "@/lib/format/datetime";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -186,7 +187,7 @@ export default async function CandidateDetailPage(
                   withAvatar
                 />
               ) : (
-                <p className="text-xs text-muted-foreground">Added {candidate.createdAt.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Added {formatDateTime(candidate.createdAt)}</p>
               )}
             </CardContent>
           </Card>

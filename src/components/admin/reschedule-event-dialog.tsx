@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { DateTimePicker } from "@/components/admin/date-time-picker";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { formatDateTime } from "@/lib/format/datetime";
 import { rescheduleEventSchema } from "@/lib/validation/events";
 import { rescheduleEventAction } from "@/actions/events/mutations";
 import type { z } from "zod";
@@ -89,7 +90,7 @@ export function RescheduleEventDialog({
                   Current schedule
                 </p>
                 <p className="mt-1">
-                  {currentOpensAt.toLocaleString()} — {currentClosesAt.toLocaleString()}
+                  {formatDateTime(currentOpensAt)} — {formatDateTime(currentClosesAt)}
                 </p>
               </div>
               <FormField
@@ -120,7 +121,7 @@ export function RescheduleEventDialog({
                     New schedule
                   </p>
                   <p className="mt-1">
-                    {opensAt.toLocaleString()} — {closesAt.toLocaleString()}
+                    {formatDateTime(opensAt)} — {formatDateTime(closesAt)}
                   </p>
                 </div>
               )}

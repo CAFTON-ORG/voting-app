@@ -1,4 +1,5 @@
 import { UserAvatar } from "@/components/admin/user-avatar";
+import { formatDateTime } from "@/lib/format/datetime";
 
 export function EntityMetadata({
   createdByName,
@@ -33,7 +34,7 @@ export function EntityMetadata({
         <div className="flex items-center gap-2">
           {withAvatar && <UserAvatar label={createdByName} imageUrl={createdByAvatarUrl} size="sm" />}
           <p>
-            Created by {createdByName} · {createdAt.toLocaleString()}
+            Created by {createdByName} · {formatDateTime(createdAt)}
           </p>
         </div>
       )}
@@ -41,7 +42,7 @@ export function EntityMetadata({
         <div className="flex items-center gap-2">
           {withAvatar && <UserAvatar label={updatedByName} imageUrl={updatedByAvatarUrl} size="sm" />}
           <p>
-            Last edited by {updatedByName} · {updatedAt.toLocaleString()}
+            Last edited by {updatedByName} · {formatDateTime(updatedAt)}
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { Bot } from "lucide-react";
 import { UserAvatar } from "@/components/admin/user-avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, SortableHeader } from "@/components/admin/data-table";
+import { formatDateTime } from "@/lib/format/datetime";
 
 export type AuditRow = {
   id: string;
@@ -30,8 +31,8 @@ function ActionCell({ row }: { row: AuditRow }) {
       <div>
         <p className="font-medium capitalize">{actionLabel(row.action)}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {prev.votingOpensAt && new Date(prev.votingOpensAt).toLocaleString()} →{" "}
-          {next.votingOpensAt && new Date(next.votingOpensAt).toLocaleString()}
+          {prev.votingOpensAt && formatDateTime(new Date(prev.votingOpensAt))} →{" "}
+          {next.votingOpensAt && formatDateTime(new Date(next.votingOpensAt))}
         </p>
       </div>
     );
@@ -83,7 +84,7 @@ const columns: ColumnDef<AuditRow>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-right text-muted-foreground">{row.original.createdAt.toLocaleString()}</div>
+      <div className="text-right text-muted-foreground">{formatDateTime(row.original.createdAt)}</div>
     ),
   },
 ];

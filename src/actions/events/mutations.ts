@@ -63,7 +63,7 @@ export async function editEventAction(input: unknown): Promise<ActionResult> {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
     const data = editEventSchema.parse(input);
 
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
       if (event.state === "FINALIZED") {
         throw new Error("This event's results have been finalized and its details are frozen.");
@@ -85,9 +85,14 @@ export async function editEventAction(input: unknown): Promise<ActionResult> {
           metadata: { name: data.name },
         },
       });
+      return event;
     });
 
     revalidatePath(`/admin/events/${data.eventId}`);
+    // name and the public-ballot-count toggle both show on the public
+    // pages - see src/lib/events/public-queries.ts.
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not save changes. Please try again."));
@@ -146,7 +151,7 @@ export async function rescheduleEventAction(input: unknown): Promise<ActionResul
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
     const data = rescheduleEventSchema.parse(input);
 
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
       if (event.state !== "SCHEDULED") {
         throw new Error("The schedule can only be adjusted before voting opens.");
@@ -174,9 +179,11 @@ export async function rescheduleEventAction(input: unknown): Promise<ActionResul
           },
         },
       });
+      return event;
     });
 
     revalidatePath(`/admin/events/${data.eventId}`);
+    revalidatePath(`/events/${event.slug}`);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not reschedule the event."));
@@ -205,6 +212,7 @@ export async function archiveEventAction(eventId: string): Promise<ActionResult>
       });
     });
     revalidatePath("/admin");
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not archive the event."));
@@ -228,6 +236,7 @@ export async function unarchiveEventAction(eventId: string): Promise<ActionResul
       });
     });
     revalidatePath("/admin");
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not restore the event."));
@@ -247,7 +256,7 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
 
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       const neverOpened = event.state === "DRAFT" || event.state === "SCHEDULED";
       const archivedAndDone = Boolean(event.archivedAt) && (event.state === "CLOSED" || event.state === "FINALIZED");
@@ -268,9 +277,12 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
         },
       });
       await tx.event.delete({ where: { id: eventId } });
+      return event;
     });
 
     revalidatePath("/admin");
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err, "Could not delete the event."));

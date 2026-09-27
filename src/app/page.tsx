@@ -10,7 +10,7 @@ import {
   EyeOff,
   GraduationCap,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma/client";
+import { getPublicHomeEvents } from "@/lib/events/public-queries";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
@@ -175,29 +175,11 @@ function ClosedEventCard({
 
 export default async function Home() {
   const [allEvents, identity] = await Promise.all([
-    prisma.event.findMany({
-      // Archived is a deliberate soft-hide independent of state (see the
-      // Event model) - an archived CLOSED/FINALIZED event stays out of
-      // the default list here too, same as it already does in the admin
-      // events list. DRAFT/SCHEDULED stay excluded as before (nothing
-      // public to show yet); CLOSED/FINALIZED are now included alongside
-      // OPEN, since a past event is still real public information (who
-      // ran, that it happened) even once voting has ended - the same
-      // "never expose candidate-level results" policy still applies on
-      // its own page regardless of state.
-      where: {
-        state: { in: ["OPEN", "CLOSED", "FINALIZED"] },
-        archivedAt: null,
-      },
-      orderBy: [{ votingOpensAt: "desc" }, { createdAt: "desc" }],
-      include: {
-        candidates: {
-          where: { isActive: true },
-          orderBy: { displayOrder: "asc" },
-          select: { id: true, fullName: true, photoUrl: true },
-        },
-      },
-    }),
+    // Cached for 20s (see src/lib/events/public-queries.ts) - every action
+    // that changes which events should show here also busts this
+    // explicitly, so this window only matters between now and the next
+    // admin change, not as the normal update latency.
+    getPublicHomeEvents(),
     getTrustedIdentity(),
   ]);
   const openEvents = allEvents.filter((e) => e.state === "OPEN");

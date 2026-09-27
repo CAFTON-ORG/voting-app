@@ -10,12 +10,20 @@ import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/re
  * mutation + audit log in one Prisma transaction so they can't silently
  * diverge, then revalidate. No transition here ever touches a Ballot
  * row — only Event.state. Expected failures (wrong state, missing
- * reason) are returned, not thrown — see src/lib/actions/result.ts. */
+ * reason) are returned, not thrown — see src/lib/actions/result.ts.
+ *
+ * Every transition also revalidates "/" and the event's own public page -
+ * both are backed by a short-TTL cache (see src/lib/events/public-queries.ts),
+ * and revalidatePath busts any unstable_cache entries read during that
+ * path's own render, not just the page shell itself. Without this, opening
+ * or closing voting could take up to that cache's TTL to actually show up
+ * for a voter, which defeats the point of an admin action that's supposed
+ * to be immediate. */
 
 export async function openVotingAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("OPEN_VOTING");
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
         include: { categories: { include: { candidates: { select: { isActive: true } } } } },
@@ -32,8 +40,11 @@ export async function openVotingAction(eventId: string): Promise<ActionResult> {
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "VOTING_OPENED", metadata: {} },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -43,7 +54,7 @@ export async function openVotingAction(eventId: string): Promise<ActionResult> {
 export async function pauseVotingAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("PAUSE_VOTING");
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       if (event.state !== "OPEN") {
         throw new Error("Voting can only be paused while OPEN.");
@@ -52,8 +63,11 @@ export async function pauseVotingAction(eventId: string): Promise<ActionResult> 
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "VOTING_PAUSED", metadata: {} },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -63,7 +77,7 @@ export async function pauseVotingAction(eventId: string): Promise<ActionResult> 
 export async function resumeVotingAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("RESUME_VOTING");
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       if (event.state !== "PAUSED") {
         throw new Error("Voting can only be resumed from PAUSED.");
@@ -72,8 +86,11 @@ export async function resumeVotingAction(eventId: string): Promise<ActionResult>
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "VOTING_RESUMED", metadata: {} },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -83,7 +100,7 @@ export async function resumeVotingAction(eventId: string): Promise<ActionResult>
 export async function closeVotingAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("CLOSE_VOTING");
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       if (event.state !== "OPEN" && event.state !== "PAUSED") {
         throw new Error("Voting can only be closed from OPEN or PAUSED.");
@@ -92,8 +109,11 @@ export async function closeVotingAction(eventId: string): Promise<ActionResult> 
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "VOTING_CLOSED", metadata: {} },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -109,7 +129,7 @@ export async function reopenVotingAction(eventId: string, reason: string): Promi
     if (!trimmedReason) {
       return fail("A reason is required to reopen a closed event.");
     }
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       if (event.state !== "CLOSED") {
         throw new Error("Only a CLOSED event can be reopened.");
@@ -123,8 +143,11 @@ export async function reopenVotingAction(eventId: string, reason: string): Promi
           metadata: { reason: trimmedReason },
         },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -137,7 +160,7 @@ export async function reopenVotingAction(eventId: string, reason: string): Promi
 export async function finalizeEventAction(eventId: string): Promise<ActionResult> {
   try {
     const admin = await requirePermission("FINALIZE_RESULTS");
-    await prisma.$transaction(async (tx) => {
+    const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
       if (event.state !== "CLOSED") {
         throw new Error("Only a CLOSED event can be finalized.");
@@ -149,8 +172,11 @@ export async function finalizeEventAction(eventId: string): Promise<ActionResult
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "RESULTS_FINALIZED", metadata: {} },
       });
+      return event;
     });
     revalidatePath(`/admin/events/${eventId}`);
+    revalidatePath(`/events/${event.slug}`);
+    revalidatePath("/");
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));

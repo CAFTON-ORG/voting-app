@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma/client";
+import { getPublicEventDetail } from "@/lib/events/public-queries";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
 import { getBallotCount } from "@/lib/results/queries";
 import { getTrustedIdentity } from "@/lib/auth/identity";
@@ -18,17 +18,13 @@ import { SectionHeader } from "@/components/shared/section-header";
  * "meet the candidates" preview is shown regardless of voting state. */
 export default async function EventPage(props: PageProps<"/events/[slug]">) {
   const { slug } = await props.params;
-  const event = await prisma.event.findUnique({
-    where: { slug },
-    include: {
-      categories: {
-        orderBy: { displayOrder: "asc" },
-        include: { candidates: { where: { isActive: true }, orderBy: { displayOrder: "asc" } } },
-      },
-    },
-  });
+  const event = await getPublicEventDetail(slug);
   if (!event || event.state === "DRAFT") notFound();
-  if (await autoCloseIfExpired(event)) event.state = "CLOSED";
+  // `event` comes back from unstable_cache - mutating it in place isn't
+  // something to rely on (whether that leaks into the cached value is an
+  // internal implementation detail, not a documented guarantee), so the
+  // just-closed state is tracked separately instead of writing event.state.
+  const state = (await autoCloseIfExpired(event)) ? "CLOSED" : event.state;
 
   const [ballotCount, identity] = await Promise.all([
     event.showPublicBallotCount ? getBallotCount(event.id) : Promise.resolve(null),
@@ -61,7 +57,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
           <EventHero
             name={event.name}
             organizer="University of Baguio · School of Information Technology"
-            state={event.state}
+            state={state}
             votingOpensAt={event.votingOpensAt}
             votingClosesAt={event.votingClosesAt}
             slug={slug}

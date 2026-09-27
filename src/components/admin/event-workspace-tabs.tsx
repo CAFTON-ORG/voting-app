@@ -14,6 +14,7 @@ import { DataTable, SortableHeader } from "@/components/admin/data-table";
 import { EmptyState } from "@/components/admin/empty-state";
 import type { CandidateCardData } from "@/components/admin/candidate-card";
 import { getPercentageColor } from "@/lib/format/progress-color";
+import { formatDateTime } from "@/lib/format/datetime";
 import { BarChart3, Users } from "lucide-react";
 
 type CategoryOption = { id: string; name: string; candidateCount: number };
@@ -60,7 +61,7 @@ const voterColumns: ColumnDef<VoterTableRow>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-right text-muted-foreground">{row.original.votedAt.toLocaleString()}</div>
+      <div className="text-right text-muted-foreground">{formatDateTime(row.original.votedAt)}</div>
     ),
   },
 ];
