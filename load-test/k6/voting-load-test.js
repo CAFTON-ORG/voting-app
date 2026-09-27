@@ -4,6 +4,18 @@
 // run. See docs/load-testing.md for the full step-by-step runbook and
 // what to watch in the Supabase/Vercel dashboards while each run executes.
 //
+// Authentication happens ONCE, up front, in setup() - never inside the
+// timed load phase. A real voter authenticates once (via Google OAuth in
+// production) and then just carries that session; a k6 iteration calling
+// /api/test-auth on every loop doesn't reflect that; it hammers Supabase
+// Auth's own /auth/v1/token endpoint, which defaults to 150 requests per
+// 5 minutes PER IP (per Supabase's own docs) - and every k6 VU shares the
+// same IP, the load-generator machine's. A first version of this test
+// tripped that limit at just 20 looping VUs, produced a wave of 429s that
+// had nothing to do with voting-system capacity, and made the whole run's
+// numbers unreliable. See auth-capacity-test.js for testing that endpoint
+// specifically, in isolation, with its own separate metrics.
+//
 // Example:
 //   k6 run load-test/k6/voting-load-test.js \
 //     -e BASE_URL=https://staging.example.vercel.app \
@@ -11,10 +23,10 @@
 //     -e VUS=500 -e DURATION=3m
 import http from "k6/http";
 import { check, sleep } from "k6";
-import { BASE_URL, EVENT_SLUG, VOTER_DOMAIN, VOTER_POOL_SIZE, authHeaders, vercelBypassHeaders } from "./config.js";
+import { BASE_URL, EVENT_SLUG, vercelBypassHeaders, authHeaders } from "./config.js";
+import { establishSessions } from "./sessions.js";
 import {
   publicReadDuration,
-  authLoginDuration,
   votePageDuration,
   ballotSubmitDuration,
   ballotSuccess,
@@ -30,8 +42,27 @@ const DURATION = __ENV.DURATION || "2m";
 // browsing and 20% people actually mid-vote at any given moment - split
 // the VU pool the same way rather than giving both scenarios equal weight.
 const PUBLIC_SHARE = Number(__ENV.PUBLIC_SHARE || 0.8);
+// How many distinct authenticated sessions to establish during setup().
+// This is deliberately NOT tied to VUS - it doesn't need to be. Sessions
+// are reused across iterations (a session submitting a second ballot just
+// correctly gets "already voted", which is itself a real outcome worth
+// measuring), and a bigger pool only helps if you specifically want more
+// unique first-time voters represented in one run. Default covers the
+// voting_flow VU count with some headroom.
+const SESSION_POOL_SIZE = Number(__ENV.SESSION_POOL_SIZE || Math.max(20, Math.round(VUS * (1 - PUBLIC_SHARE) * 1.5)));
+// Spacing between each setup-phase login call, in seconds. At the default
+// 1.5s, a 40-session pool takes ~60s to build and sits comfortably under
+// Supabase's 150/5min-per-IP budget even stacked on top of whatever a
+// prior run in the same 5-minute window already used.
+const SETUP_LOGIN_DELAY_SECONDS = Number(__ENV.SETUP_LOGIN_DELAY_SECONDS || 1.5);
 
 export const options = {
+  // k6's default setupTimeout is 60s - establishing a session pool takes
+  // longer than that once you add up each login's real request latency on
+  // top of the deliberate SETUP_LOGIN_DELAY_SECONDS spacing (a 30-session
+  // pool alone was clocked at over 60s). Generous headroom here costs
+  // nothing if setup finishes early.
+  setupTimeout: "5m",
   scenarios: {
     public_reads: {
       executor: "constant-vus",
@@ -44,6 +75,12 @@ export const options = {
       vus: Math.max(1, Math.round(VUS * (1 - PUBLIC_SHARE))),
       duration: DURATION,
       exec: "votingFlow",
+      // Gives setup()'s sequential, rate-limit-respecting session
+      // establishment time to finish before the timed load phase starts -
+      // setup() itself isn't part of any scenario's timed duration, but
+      // this keeps the k6 progress output honest about when "the test"
+      // (as opposed to "preparing for the test") is actually running.
+      startTime: "0s",
     },
   },
   thresholds: {
@@ -57,39 +94,15 @@ export const options = {
   },
 };
 
+/** Runs once, sequentially, before any VU starts iterating - this is
+ * where ALL authentication happens for this test. Real server-side
+ * identity/authorization checks still run for real on every subsequent
+ * request (getTrustedIdentity() verifies the actual session cookie via
+ * Supabase on every call, exactly like production) - only the repeated
+ * *calling of the login endpoint itself* is removed, because that's the
+ * part that doesn't reflect a real voter's behavior. */
 export function setup() {
-  const res = http.get(`${BASE_URL}/api/load-test/event-info?slug=${EVENT_SLUG}`, {
-    headers: authHeaders(),
-  });
-  if (res.status !== 200) {
-    throw new Error(`event-info setup call failed: ${res.status} ${res.body}`);
-  }
-  const info = JSON.parse(res.body);
-  if (info.categories.some((c) => c.candidateIds.length === 0)) {
-    throw new Error("Every category in the load-test event needs at least one active candidate");
-  }
-  return info;
-}
-
-function pickVoterEmail() {
-  // Spreads usage across the whole provisioned pool rather than every VU
-  // reusing voter #1 - deliberately still lets the same voter come up
-  // again across iterations/VUs, since a realistic mix of fresh votes,
-  // "already voted" retries, and rate-limited retries is exactly what's
-  // being measured, not something to avoid.
-  const index = (((__VU * 2654435761) >>> 0) + __ITER) % VOTER_POOL_SIZE + 1;
-  return `loadtest-voter-${index}@${VOTER_DOMAIN}`;
-}
-
-function login(email) {
-  const res = http.post(`${BASE_URL}/api/test-auth`, JSON.stringify({ email }), {
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    tags: { name: "auth_login" },
-  });
-  authLoginDuration.add(res.timings.duration);
-  const ok = check(res, { "login succeeded": (r) => r.status === 200 });
-  if (!ok) hardErrors.add(1, { type: "auth_login" });
-  return ok;
+  return establishSessions(SESSION_POOL_SIZE, SETUP_LOGIN_DELAY_SECONDS);
 }
 
 function classifyAndRecordBallotResult(res) {
@@ -121,17 +134,18 @@ function classifyAndRecordBallotResult(res) {
   }
 }
 
-/** One simulated voter's full session: sign in (via the staging-only
- * /api/test-auth shim, never Google), load the real vote page under that
- * session, then submit a ballot through the load-test shim that calls the
- * real castBallotAction. This is deliberately "one iteration = one
- * voter, once" - that's what a real voter does, not a loop. */
-export function votingFlow(eventInfo) {
-  const email = pickVoterEmail();
-  if (!login(email)) return;
+/** One simulated voter's session, reusing a cookie header established
+ * back in setup() - no call to /api/test-auth happens here. Loads the
+ * real vote page under that session (getTrustedIdentity/eligibility/
+ * hasVoterParticipated all execute for real against the cookie), then
+ * submits a ballot through the load-test shim that calls the real
+ * castBallotAction. */
+export function votingFlow(data) {
+  const { eventInfo, sessions } = data;
+  const cookieHeader = sessions[(__VU + __ITER) % sessions.length];
 
   const pageRes = http.get(`${BASE_URL}/events/${EVENT_SLUG}/vote`, {
-    headers: vercelBypassHeaders(),
+    headers: vercelBypassHeaders({ Cookie: cookieHeader }),
     tags: { name: "vote_page" },
   });
   votePageDuration.add(pageRes.timings.duration);
@@ -147,14 +161,18 @@ export function votingFlow(eventInfo) {
   const submitRes = http.post(
     `${BASE_URL}/api/load-test/cast-ballot`,
     JSON.stringify({ eventId: eventInfo.eventId, selections }),
-    { headers: authHeaders({ "Content-Type": "application/json" }), tags: { name: "ballot_submit" } }
+    {
+      headers: authHeaders({ "Content-Type": "application/json", Cookie: cookieHeader }),
+      tags: { name: "ballot_submit" },
+    }
   );
   classifyAndRecordBallotResult(submitRes);
 }
 
 /** Someone just checking whether voting has opened yet - the highest-
  * volume, lowest-cost request pattern, and the one src/lib/events/public-
- * queries.ts's caching is specifically meant to absorb. */
+ * queries.ts's caching is specifically meant to absorb. Deliberately
+ * unauthenticated, same as a real anonymous visitor. */
 export function publicReads() {
   const homeRes = http.get(`${BASE_URL}/`, { headers: vercelBypassHeaders(), tags: { name: "home" } });
   publicReadDuration.add(homeRes.timings.duration);

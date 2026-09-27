@@ -15,11 +15,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default async function VotePage(props: PageProps<"/events/[slug]/vote">) {
   const { slug } = await props.params;
-  const event = await getVotableEvent(slug);
+  // getVotableEvent and getTrustedIdentity are independent (event lookup,
+  // JWT verification) - running them in parallel removes one full DB/auth
+  // round-trip from every vote-page load instead of paying for it twice.
+  const [event, identity] = await Promise.all([getVotableEvent(slug), getTrustedIdentity()]);
   if (!event) notFound();
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
-  const identity = await getTrustedIdentity();
   if (!identity) {
     return (
       <AuthPageShell title={event.name} description="Sign in with your University of Baguio account to vote." backHref={`/events/${slug}`}>

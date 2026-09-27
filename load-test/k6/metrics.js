@@ -4,7 +4,6 @@
 import { Trend, Counter } from "k6/metrics";
 
 export const publicReadDuration = new Trend("public_read_duration", true);
-export const authLoginDuration = new Trend("auth_login_duration", true);
 export const votePageDuration = new Trend("vote_page_duration", true);
 export const ballotSubmitDuration = new Trend("ballot_submit_duration", true);
 

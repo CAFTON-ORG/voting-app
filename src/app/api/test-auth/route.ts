@@ -47,7 +47,14 @@ export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
-    return NextResponse.json({ error: error?.message ?? "Sign-in failed" }, { status: 401 });
+    // Forward Supabase's own status (e.g. 429 when its token endpoint's
+    // rate limit is hit - see docs/load-testing.md and auth-capacity-
+    // test.js) rather than collapsing every failure into a generic 401.
+    // A load-test script needs the real status to tell "rate limited" apart
+    // from "actually failed", and a genuine caller benefits from the same
+    // distinction.
+    const status = typeof error?.status === "number" ? error.status : 401;
+    return NextResponse.json({ error: error?.message ?? "Sign-in failed" }, { status });
   }
 
   // The session is already persisted via the cookie-writing callbacks
