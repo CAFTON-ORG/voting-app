@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
 import { getEventReadiness } from "@/lib/events/readiness";
+import { invalidatePublicHomeCache, invalidatePublicEventCache } from "@/lib/cache/public-cache";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
 /** Every sensitive transition: permission check, current-state guard,
@@ -12,13 +13,10 @@ import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/re
  * row — only Event.state. Expected failures (wrong state, missing
  * reason) are returned, not thrown — see src/lib/actions/result.ts.
  *
- * Every transition also revalidates "/" and the event's own public page -
- * both are backed by a short-TTL cache (see src/lib/events/public-queries.ts),
- * and revalidatePath busts any unstable_cache entries read during that
- * path's own render, not just the page shell itself. Without this, opening
- * or closing voting could take up to that cache's TTL to actually show up
- * for a voter, which defeats the point of an admin action that's supposed
- * to be immediate. */
+ * Every transition also busts the public home/event-detail cache (see
+ * src/lib/cache/public-cache.ts). Without this, opening or closing voting
+ * could take up to that cache's TTL to actually show up for a voter, which
+ * defeats the point of an admin action that's supposed to be immediate. */
 
 export async function openVotingAction(eventId: string): Promise<ActionResult> {
   try {
@@ -45,6 +43,7 @@ export async function openVotingAction(eventId: string): Promise<ActionResult> {
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -68,6 +67,7 @@ export async function pauseVotingAction(eventId: string): Promise<ActionResult> 
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -91,6 +91,7 @@ export async function resumeVotingAction(eventId: string): Promise<ActionResult>
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -114,6 +115,7 @@ export async function closeVotingAction(eventId: string): Promise<ActionResult> 
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -148,6 +150,7 @@ export async function reopenVotingAction(eventId: string, reason: string): Promi
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));
@@ -177,6 +180,7 @@ export async function finalizeEventAction(eventId: string): Promise<ActionResult
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
     return ok(undefined);
   } catch (err) {
     return fail(toFriendlyMessage(err));

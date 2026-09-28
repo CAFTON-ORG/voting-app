@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
+import { invalidatePublicHomeCache, invalidatePublicEventCache } from "@/lib/cache/public-cache";
 import { supabaseAdmin, supabaseAdminConfigured } from "@/lib/supabase/admin";
 import {
   validateEventCover,
@@ -85,6 +86,7 @@ export async function uploadEventCoverAction(
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
 
     return ok({ url: publicUrl });
   } catch (err) {
@@ -123,6 +125,7 @@ export async function removeEventCoverAction(eventId: string): Promise<ActionRes
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/events/${event.slug}`);
     revalidatePath("/");
+    await Promise.all([invalidatePublicEventCache(event.slug), invalidatePublicHomeCache()]);
 
     return ok(undefined);
   } catch (err) {

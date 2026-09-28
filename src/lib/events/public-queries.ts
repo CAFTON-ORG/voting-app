@@ -1,7 +1,7 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
+import { readHomeEventsCache, readEventDetailCache } from "@/lib/cache/public-cache";
 import type { Event, Candidate } from "@prisma/client";
 
 // Scope, deliberately: this file only ever caches read-only, low-stakes
@@ -14,17 +14,16 @@ import type { Event, Candidate } from "@prisma/client";
 // exists to prevent. A short cache here only ever affects how quickly a
 // name/photo/status badge update becomes visible to someone browsing, not
 // whether a vote is accepted.
-
-export const PUBLIC_EVENTS_TAG = "public-events";
-export const eventDetailTag = (slug: string) => `event-detail:${slug}`;
+//
+// Backed by Upstash Redis (src/lib/cache/public-cache.ts), not Next's
+// unstable_cache/Data Cache - see that file's comment for why.
 
 // 20s: long enough that a burst of simultaneous page loads (everyone
 // checking "is voting open yet" at once) shares one DB round trip instead
 // of one each, short enough that nobody perceives the list as stale.
-// Every admin action that changes what this shows also calls
-// revalidatePath directly for "/" and the event's own page (see
-// src/actions/events/*), so this window is a worst-case bound, not the
-// normal update latency.
+// Every admin action that changes what this shows also explicitly
+// invalidates this cache (see src/actions/events/*), so this window is a
+// worst-case bound, not the normal update latency.
 const HOME_REVALIDATE_SECONDS = 20;
 const EVENT_DETAIL_REVALIDATE_SECONDS = 15;
 
@@ -74,13 +73,8 @@ function fetchPublicHomeEvents() {
   });
 }
 
-const getCachedPublicHomeEvents = unstable_cache(fetchPublicHomeEvents, ["public-home-events"], {
-  revalidate: HOME_REVALIDATE_SECONDS,
-  tags: [PUBLIC_EVENTS_TAG],
-});
-
 export async function getPublicHomeEvents() {
-  const events = await getCachedPublicHomeEvents();
+  const events = await readHomeEventsCache(HOME_REVALIDATE_SECONDS, fetchPublicHomeEvents);
   return events.map(reviveEventDates);
 }
 
@@ -98,17 +92,10 @@ function fetchPublicEventDetail(slug: string) {
   });
 }
 
-/** Keyed by slug in both the cache key parts and the tag, so each event's
- * public page invalidates independently - editing one event's name never
- * evicts every other event's cached page. Called fresh per request (the
- * wrapping happens every call) which is the documented pattern for a
- * per-argument unstable_cache entry - the cache key comes from `keyParts`
- * + the call arguments, not from the wrapper's own identity. */
+/** Keyed by slug, so each event's public page invalidates independently -
+ * editing one event's name never evicts every other event's cached page. */
 export async function getPublicEventDetail(slug: string) {
-  const event = await unstable_cache(fetchPublicEventDetail, ["public-event-detail", slug], {
-    revalidate: EVENT_DETAIL_REVALIDATE_SECONDS,
-    tags: [eventDetailTag(slug), PUBLIC_EVENTS_TAG],
-  })(slug);
+  const event = await readEventDetailCache(slug, EVENT_DETAIL_REVALIDATE_SECONDS, () => fetchPublicEventDetail(slug));
   if (!event) return event;
   return {
     ...reviveEventDates(event),

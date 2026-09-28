@@ -1,22 +1,15 @@
 import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { redis, redisConfigured } from "@/lib/redis/client";
 
-// Optional by design: local dev and any environment without Upstash
-// configured just runs with no rate limiting at all (see checkRateLimit
-// below) rather than crashing on missing env vars. This is a defense-in-
-// depth layer against abuse, not the thing that keeps voting data correct
-// — Postgres's own unique constraint on (eventId, voterAuthUserId) is what
-// actually prevents a duplicate vote (see docs/security-boundaries.md and
-// the cast_ballot() Postgres function), so its absence is degraded
-// posture, never a correctness gap.
-const url = process.env.UPSTASH_REDIS_REST_URL;
-const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-export const rateLimitConfigured = Boolean(url && token);
-
-const redis = rateLimitConfigured ? new Redis({ url: url!, token: token! }) : null;
+// This is a defense-in-depth layer against abuse, not the thing that keeps
+// voting data correct — Postgres's own unique constraint on (eventId,
+// voterAuthUserId) is what actually prevents a duplicate vote (see
+// docs/security-boundaries.md and the cast_ballot() Postgres function), so
+// Redis being unconfigured or unavailable is degraded posture, never a
+// correctness gap (see checkRateLimit's fail-open behavior below).
+export const rateLimitConfigured = redisConfigured;
 
 // One Ratelimit instance per named limiter, not per call - @upstash/
 // ratelimit's own docs recommend reusing the instance so its internal
