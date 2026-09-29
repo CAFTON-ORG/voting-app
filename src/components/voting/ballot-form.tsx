@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -63,18 +64,31 @@ export function BallotForm({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [profileCandidate, setProfileCandidate] = useState<PublicCandidateProfile | null>(null);
+  const router = useRouter();
 
-  // The browser's back/forward cache can restore this entire component
-  // exactly as it was — DOM and state included — without ever re-running
-  // the server component that checks hasVoterParticipated(). A real
-  // resubmission is still safely rejected server-side either way (see
-  // cast_ballot()'s own unique-constraint check), but a voter landing back
-  // on a frozen "cast your vote" screen after already voting is confusing.
-  // pageshow's `persisted` flag is exactly how a page tells bfcache
-  // restoration apart from a normal load; reloading forces the fresh,
-  // server-verified state (this page, this account, right now) instead of
-  // whatever was true when the snapshot was taken.
+  // Two different caches can show a stale version of this page after a
+  // browser back/forward navigation, and both need their own fix:
+  //
+  // 1. The browser's own back/forward cache (bfcache) can restore this
+  //    entire component exactly as it was - DOM and state included -
+  //    without re-running anything. pageshow's `persisted` flag is how a
+  //    page tells that apart from a normal load; reloading forces a real
+  //    round trip through the server component again.
+  // 2. Next.js's OWN client-side Router Cache is a separate mechanism and
+  //    is NOT affected by the fix above, or by this project's
+  //    staleTimes: { dynamic: 0 } config - Next's docs state outright that
+  //    staleTimes "doesn't change back/forward caching behavior", i.e.
+  //    back/forward navigation within the app always serves the cached
+  //    RSC payload on purpose, to avoid layout shift/scroll loss.
+  //    router.refresh() is the documented way to force a fresh
+  //    server-component re-render regardless of that cache - safe to call
+  //    unconditionally on mount since it only ever adds one redundant
+  //    round trip on a genuinely fresh visit, and self-corrects a stale
+  //    back/forward view (e.g. to "vote already submitted") immediately
+  //    after it would otherwise have flashed.
   useEffect(() => {
+    router.refresh();
+
     function handlePageShow(pageShowEvent: PageTransitionEvent) {
       if (pageShowEvent.persisted) {
         window.location.reload();
@@ -82,6 +96,7 @@ export function BallotForm({
     }
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router.refresh() must run once on mount only, not on every router-identity change.
   }, []);
 
   const allSelected = event.categories.every((category) => selections[category.id]);
