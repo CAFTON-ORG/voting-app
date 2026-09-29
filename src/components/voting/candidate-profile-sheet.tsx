@@ -83,7 +83,7 @@ export function CandidateProfileSheet({
                   {isSelected ? (
                     <>
                       <Check className="size-4" />
-                      Selected
+                      Selected — tap to remove
                     </>
                   ) : (
                     "Select this candidate"

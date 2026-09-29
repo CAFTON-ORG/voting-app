@@ -9,12 +9,14 @@ export function BallotCategorySection({
   category,
   selectedCandidateId,
   onSelect,
+  onDeselect,
   onViewProfile,
   toProfile,
 }: {
   category: CandidateCategory & { candidates: Candidate[] };
   selectedCandidateId: string | undefined;
   onSelect: (candidateId: string) => void;
+  onDeselect: () => void;
   onViewProfile: (candidate: PublicCandidateProfile) => void;
   toProfile: (candidate: Candidate, categoryName: string) => PublicCandidateProfile;
 }) {
@@ -38,6 +40,7 @@ export function BallotCategorySection({
             candidate={toProfile(candidate, category.name)}
             selected={selectedCandidateId === candidate.id}
             onViewProfile={() => onViewProfile(toProfile(candidate, category.name))}
+            onDeselect={onDeselect}
           />
         ))}
       </RadioGroup>

@@ -15,6 +15,7 @@ import { getPercentageColor } from "@/lib/format/progress-color";
 import { formatDateTime } from "@/lib/format/datetime";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "cn";
 
 export default async function CandidateDetailPage(
   props: PageProps<"/admin/events/[id]/candidates/[candidateId]">
@@ -127,70 +128,58 @@ export default async function CandidateDetailPage(
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Candidate Information</CardTitle>
-            </CardHeader>
-            {/* Only the fields the candidate form actually collects -
-                tagline/biography were removed from create/edit earlier and
-                showing them here (always empty for anything added since)
-                just read as broken fields, not real candidate data. */}
-            <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-xs text-muted-foreground">Full name</p>
-                <p>{candidate.fullName}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Candidate number</p>
-                <p>#{candidate.candidateNumber}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Category</p>
-                <p>{candidate.category.name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Course / Year level</p>
-                <p>{candidate.programYear ?? "—"}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {canSeeVotes && (
-            <Card>
+          {/* Name, number, and category already show in the header above -
+              repeating them here read as redundant. This card now only
+              carries the one field the header doesn't (course/year), plus
+              a compact activity footnote, so it earns a whole Card at all;
+              when there's a live vote count to show, it sits alongside
+              instead of stacked below, so the page doesn't scroll further
+              than the actual amount of content justifies. */}
+          <div className={cn("grid grid-cols-1 gap-4", canSeeVotes && "lg:grid-cols-5")}>
+            <Card className={cn(canSeeVotes && "lg:col-span-3")}>
               <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">Voting Information</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Details</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-semibold tabular-nums">{candidate._count.selections}</p>
-                  <p className="text-xs text-muted-foreground">votes</p>
-                  <p className="ml-auto text-sm font-medium tabular-nums">{votePercentage}%</p>
+              <CardContent className="flex flex-col gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Course / Year level</p>
+                  <p className="text-sm">{candidate.programYear ?? "—"}</p>
                 </div>
-                <Progress value={votePercentage} indicatorClassName={getPercentageColor(votePercentage)} />
-                <p className="text-xs text-muted-foreground">
-                  of {categoryTotalVotes} vote{categoryTotalVotes === 1 ? "" : "s"} cast in {candidate.category.name}
-                </p>
+                <div className="border-t pt-4">
+                  {createdByName ? (
+                    <EntityMetadata
+                      createdByName={createdByName}
+                      createdByAvatarUrl={createdByAvatarUrl}
+                      createdAt={candidate.createdAt}
+                      withAvatar
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Added {formatDateTime(candidate.createdAt)}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
-          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {createdByName ? (
-                <EntityMetadata
-                  createdByName={createdByName}
-                  createdByAvatarUrl={createdByAvatarUrl}
-                  createdAt={candidate.createdAt}
-                  withAvatar
-                />
-              ) : (
-                <p className="text-xs text-muted-foreground">Added {formatDateTime(candidate.createdAt)}</p>
-              )}
-            </CardContent>
-          </Card>
+            {canSeeVotes && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Voting Information</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-semibold tabular-nums">{candidate._count.selections}</p>
+                    <p className="text-xs text-muted-foreground">votes</p>
+                    <p className="ml-auto text-sm font-medium tabular-nums">{votePercentage}%</p>
+                  </div>
+                  <Progress value={votePercentage} indicatorClassName={getPercentageColor(votePercentage)} />
+                  <p className="text-xs text-muted-foreground">
+                    of {categoryTotalVotes} vote{categoryTotalVotes === 1 ? "" : "s"} cast in{" "}
+                    {candidate.category.name}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

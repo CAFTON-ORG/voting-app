@@ -67,6 +67,14 @@ export function BallotForm({
   const allSelected = event.categories.every((category) => selections[category.id]);
   const completedCount = event.categories.filter((category) => selections[category.id]).length;
 
+  function clearSelection(categoryId: string) {
+    setSelections((current) => {
+      const next = { ...current };
+      delete next[categoryId];
+      return next;
+    });
+  }
+
   function toProfile(candidate: Candidate, categoryName: string): PublicCandidateProfile {
     return {
       id: candidate.id,
@@ -341,6 +349,7 @@ export function BallotForm({
               onSelect={(candidateId) =>
                 setSelections((current) => ({ ...current, [category.id]: candidateId }))
               }
+              onDeselect={() => clearSelection(category.id)}
               onViewProfile={setProfileCandidate}
               toProfile={toProfile}
             />
@@ -374,7 +383,11 @@ export function BallotForm({
           if (!profileCandidate) return;
           const category = event.categories.find((c) => c.candidates.some((cd) => cd.id === profileCandidate.id));
           if (!category) return;
-          setSelections((current) => ({ ...current, [category.id]: profileCandidate.id }));
+          if (selections[category.id] === profileCandidate.id) {
+            clearSelection(category.id);
+          } else {
+            setSelections((current) => ({ ...current, [category.id]: profileCandidate.id }));
+          }
           setProfileCandidate(null);
         }}
       />

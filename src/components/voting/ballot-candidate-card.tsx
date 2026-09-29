@@ -15,15 +15,23 @@ import type { PublicCandidateProfile } from "@/components/voting/candidate-profi
  * Selection state is deliberately redundant (icon + badge text + border +
  * background), never color alone. Deliberately just number + name — the
  * rest of a candidate's info (program, tagline, bio) lives one tap away
- * in the profile sheet instead of crowding the selection grid. */
+ * in the profile sheet instead of crowding the selection grid.
+ *
+ * A native radio input never fires a change event for a click on the
+ * option that's already checked — that's standard browser behavior, not
+ * something Radix is withholding — so tapping a selected card to clear it
+ * has to be intercepted here, one level up from RadioGroup's own
+ * onValueChange, which only ever sees genuine value changes. */
 export function BallotCandidateCard({
   candidate,
   selected,
   onViewProfile,
+  onDeselect,
 }: {
   candidate: PublicCandidateProfile;
   selected: boolean;
   onViewProfile: () => void;
+  onDeselect: () => void;
 }) {
   return (
     <label
@@ -31,6 +39,12 @@ export function BallotCandidateCard({
         "group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
         selected ? "border-primary bg-primary/5 ring-2 ring-primary" : "border-border hover:bg-muted/40"
       )}
+      onClick={(e) => {
+        if (selected) {
+          e.preventDefault();
+          onDeselect();
+        }
+      }}
     >
       <RadioGroupItem value={candidate.id} className="sr-only" />
 

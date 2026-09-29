@@ -11,7 +11,7 @@
 //     --run 500=results/summary-500.json \
 //     --run 1000=results/summary-1000.json \
 //     --run spike=results/spike-summary.json \
-//     --out load-test-report.html
+//     --out load-test/results/report.html
 //
 // Each --run <label>=<path> becomes one row/section in the report, in the
 // order given. Produces <out> (HTML) always, and <out with .pdf> too if
@@ -22,7 +22,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 function parseArgs(argv) {
   const runs = [];
   let title = "Voting System Load Test Report";
-  let out = "load-test-report.html";
+  let out = "load-test/results/report.html";
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--title") title = argv[++i];
     else if (argv[i] === "--out") out = argv[++i];
