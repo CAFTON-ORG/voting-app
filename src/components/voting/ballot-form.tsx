@@ -66,26 +66,32 @@ export function BallotForm({
   const [profileCandidate, setProfileCandidate] = useState<PublicCandidateProfile | null>(null);
   const router = useRouter();
 
-  // Two different caches can show a stale version of this page after a
-  // browser back/forward navigation, and both need their own fix:
+  // Three different mechanisms can show a stale version of this page after
+  // a browser back/forward navigation, and each needs its own handling:
   //
   // 1. The browser's own back/forward cache (bfcache) can restore this
   //    entire component exactly as it was - DOM and state included -
   //    without re-running anything. pageshow's `persisted` flag is how a
   //    page tells that apart from a normal load; reloading forces a real
   //    round trip through the server component again.
-  // 2. Next.js's OWN client-side Router Cache is a separate mechanism and
-  //    is NOT affected by the fix above, or by this project's
+  // 2. Next.js's OWN client-side Router Cache is a separate mechanism, not
+  //    affected by the fix above or by this project's
   //    staleTimes: { dynamic: 0 } config - Next's docs state outright that
   //    staleTimes "doesn't change back/forward caching behavior", i.e.
   //    back/forward navigation within the app always serves the cached
   //    RSC payload on purpose, to avoid layout shift/scroll loss.
-  //    router.refresh() is the documented way to force a fresh
-  //    server-component re-render regardless of that cache - safe to call
-  //    unconditionally on mount since it only ever adds one redundant
-  //    round trip on a genuinely fresh visit, and self-corrects a stale
-  //    back/forward view (e.g. to "vote already submitted") immediately
-  //    after it would otherwise have flashed.
+  //    router.refresh() forces a fresh server-component re-render
+  //    regardless of that cache - called once on mount for the common
+  //    case (arriving here with a fresh or bfcache-restored page).
+  // 3. Forward-navigating INTO this page from a segment the router cache
+  //    already had can reuse the already-mounted component instance
+  //    rather than creating a new one, so a mount-only effect never fires
+  //    again for that specific transition. popstate fires on every single
+  //    back/forward click regardless of whether React remounts anything,
+  //    and this listener stays registered for exactly as long as the
+  //    component stays mounted - which, in the one scenario it's meant to
+  //    catch, is indefinitely - so it keeps firing across repeated
+  //    back/forward navigation even when case 2's mount effect can't.
   useEffect(() => {
     router.refresh();
 
@@ -94,9 +100,16 @@ export function BallotForm({
         window.location.reload();
       }
     }
+    function handlePopState() {
+      router.refresh();
+    }
     window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- router.refresh() must run once on mount only, not on every router-identity change.
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("popstate", handlePopState);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- registered once on mount; router's identity is stable across renders anyway.
   }, []);
 
   const allSelected = event.categories.every((category) => selections[category.id]);
