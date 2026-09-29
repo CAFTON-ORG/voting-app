@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -63,6 +63,26 @@ export function BallotForm({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [profileCandidate, setProfileCandidate] = useState<PublicCandidateProfile | null>(null);
+
+  // The browser's back/forward cache can restore this entire component
+  // exactly as it was — DOM and state included — without ever re-running
+  // the server component that checks hasVoterParticipated(). A real
+  // resubmission is still safely rejected server-side either way (see
+  // cast_ballot()'s own unique-constraint check), but a voter landing back
+  // on a frozen "cast your vote" screen after already voting is confusing.
+  // pageshow's `persisted` flag is exactly how a page tells bfcache
+  // restoration apart from a normal load; reloading forces the fresh,
+  // server-verified state (this page, this account, right now) instead of
+  // whatever was true when the snapshot was taken.
+  useEffect(() => {
+    function handlePageShow(pageShowEvent: PageTransitionEvent) {
+      if (pageShowEvent.persisted) {
+        window.location.reload();
+      }
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
 
   const allSelected = event.categories.every((category) => selections[category.id]);
   const completedCount = event.categories.filter((category) => selections[category.id]).length;
