@@ -35,6 +35,16 @@ export async function autoCloseIfExpired(event: {
     await prisma.auditLog.create({
       data: { eventId: event.id, actorAdminId: null, action: "VOTING_AUTO_CLOSED", metadata: {} },
     });
+    // Deliberately no revalidatePath/revalidateTag here - this runs during
+    // a page's own render (not a Server Action), and calling a cache-
+    // revalidation function mid-render is unsupported territory, not worth
+    // risking a broken page load over. The public home/event queries are
+    // cached for up to ~20s (src/lib/events/public-queries.ts), so the
+    // status badge can lag the real deadline by that much in the worst
+    // case. Cosmetic only: cast_ballot() enforces the real deadline
+    // regardless of Event.state, so a stale badge was never a path to an
+    // accepted late vote, just a delayed status update, and the caller
+    // already reflects the just-closed state in its own render below.
   }
   return count > 0;
 }

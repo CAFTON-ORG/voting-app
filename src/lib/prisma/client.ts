@@ -14,11 +14,15 @@ function createClient() {
   // DATABASE_URL already points at Supabase's pgbouncer transaction
   // pooler, which does the real connection multiplexing — each serverless
   // function instance still opens its own pg.Pool on top of that (default
-  // max: 10), and a burst of concurrent invocations can present far more
-  // connections to pgbouncer than it's configured to accept. A small max
-  // here is enough for one function instance's own concurrency, since
-  // pgbouncer is already sharing the real Postgres connections beneath it.
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 3 });
+  // max: 10). This was previously set to 3 on the assumption that one
+  // function instance handles one request at a time (classic serverless).
+  // With Fluid Compute, a single warm instance serves many CONCURRENT
+  // requests through this same PrismaClient singleton, so a too-small max
+  // doesn't cause errors — it makes concurrent requests queue for one of
+  // only 3 real connections, showing up as latency, not failures. 10 stays
+  // comfortably under Supavisor's 200-client pooler limit even across
+  // several concurrently-warm instances.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 10 });
   return new PrismaClient({ adapter });
 }
 

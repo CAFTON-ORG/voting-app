@@ -5,17 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "cn";
 import { getAvatarColor } from "@/lib/format/avatar-color";
+import { formatSchedule } from "@/lib/format/datetime";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
 import { Button } from "@/components/ui/button";
 import type { EventState } from "@prisma/client";
-
-function formatSchedule(date: Date) {
-  return date.toLocaleString(undefined, {
-    dateStyle: "long",
-    timeStyle: "short",
-  });
-}
 
 /** An event with a cover image gets a real banner - name and status
  * overlaid directly on the photo via a bottom scrim, the way a cover photo
@@ -78,7 +72,7 @@ export function EventHero({
             alt=""
             fill
             aria-hidden
-            sizes="100vw"
+            sizes="(min-width: 56rem) 56rem, calc(100vw - 3rem)"
             className="scale-125 object-cover opacity-70 blur-2xl"
           />
           <div aria-hidden className="absolute inset-0 bg-background/40" />
@@ -87,7 +81,7 @@ export function EventHero({
             alt=""
             fill
             priority
-            sizes="100vw"
+            sizes="(min-width: 56rem) 56rem, calc(100vw - 3rem)"
             onLoad={() => setCoverLoaded(true)}
             className={cn("object-contain transition-opacity duration-300", coverLoaded ? "opacity-100" : "opacity-0")}
           />

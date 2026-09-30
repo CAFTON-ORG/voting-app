@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -30,9 +31,9 @@ import { VotingProgress } from "./voting-progress";
 import { BallotCategorySection } from "./ballot-category-section";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
 import { PublicHeader } from "@/components/voting/public-header";
-import { PublicFooter } from "@/components/voting/public-footer";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { CandidatePhoto } from "@/components/shared/candidate-photo";
+import { formatDateTime } from "@/lib/format/datetime";
 import type { Event, CandidateCategory, Candidate } from "@prisma/client";
 
 type EventWithBallot = Event & {
@@ -63,9 +64,64 @@ export function BallotForm({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [profileCandidate, setProfileCandidate] = useState<PublicCandidateProfile | null>(null);
+  const router = useRouter();
+
+  // Three different mechanisms can show a stale version of this page after
+  // a browser back/forward navigation, and each needs its own handling:
+  //
+  // 1. The browser's own back/forward cache (bfcache) can restore this
+  //    entire component exactly as it was - DOM and state included -
+  //    without re-running anything. pageshow's `persisted` flag is how a
+  //    page tells that apart from a normal load; reloading forces a real
+  //    round trip through the server component again.
+  // 2. Next.js's OWN client-side Router Cache is a separate mechanism, not
+  //    affected by the fix above or by this project's
+  //    staleTimes: { dynamic: 0 } config - Next's docs state outright that
+  //    staleTimes "doesn't change back/forward caching behavior", i.e.
+  //    back/forward navigation within the app always serves the cached
+  //    RSC payload on purpose, to avoid layout shift/scroll loss.
+  //    router.refresh() forces a fresh server-component re-render
+  //    regardless of that cache - called once on mount for the common
+  //    case (arriving here with a fresh or bfcache-restored page).
+  // 3. Forward-navigating INTO this page from a segment the router cache
+  //    already had can reuse the already-mounted component instance
+  //    rather than creating a new one, so a mount-only effect never fires
+  //    again for that specific transition. popstate fires on every single
+  //    back/forward click regardless of whether React remounts anything,
+  //    and this listener stays registered for exactly as long as the
+  //    component stays mounted - which, in the one scenario it's meant to
+  //    catch, is indefinitely - so it keeps firing across repeated
+  //    back/forward navigation even when case 2's mount effect can't.
+  useEffect(() => {
+    router.refresh();
+
+    function handlePageShow(pageShowEvent: PageTransitionEvent) {
+      if (pageShowEvent.persisted) {
+        window.location.reload();
+      }
+    }
+    function handlePopState() {
+      router.refresh();
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("popstate", handlePopState);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- registered once on mount; router's identity is stable across renders anyway.
+  }, []);
 
   const allSelected = event.categories.every((category) => selections[category.id]);
   const completedCount = event.categories.filter((category) => selections[category.id]).length;
+
+  function clearSelection(categoryId: string) {
+    setSelections((current) => {
+      const next = { ...current };
+      delete next[categoryId];
+      return next;
+    });
+  }
 
   function toProfile(candidate: Candidate, categoryName: string): PublicCandidateProfile {
     return {
@@ -163,7 +219,6 @@ export function BallotForm({
             </p>
           </div>
         </main>
-        <PublicFooter />
 
         <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
           <DialogContent className="sm:max-w-md">
@@ -229,14 +284,13 @@ export function BallotForm({
               </div>
             )}
             <p className="mt-4 text-xs text-muted-foreground">
-              Submitted {new Date(submittedAt).toLocaleString()}
+              Submitted {formatDateTime(new Date(submittedAt))}
             </p>
             <Button asChild variant="outline" className="mt-8">
               <a href={`/events/${event.slug}`}>Return to Event</a>
             </Button>
           </div>
         </main>
-        <PublicFooter />
       </div>
     );
   }
@@ -287,7 +341,6 @@ export function BallotForm({
             {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
           </div>
         </main>
-        <PublicFooter />
 
         <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
           <div className="mx-auto flex w-full max-w-md gap-2">
@@ -344,13 +397,13 @@ export function BallotForm({
               onSelect={(candidateId) =>
                 setSelections((current) => ({ ...current, [category.id]: candidateId }))
               }
+              onDeselect={() => clearSelection(category.id)}
               onViewProfile={setProfileCandidate}
               toProfile={toProfile}
             />
           ))}
         </div>
       </main>
-      <PublicFooter />
 
       <div className="sticky bottom-0 border-t bg-background/95 px-6 py-3 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
@@ -378,7 +431,11 @@ export function BallotForm({
           if (!profileCandidate) return;
           const category = event.categories.find((c) => c.candidates.some((cd) => cd.id === profileCandidate.id));
           if (!category) return;
-          setSelections((current) => ({ ...current, [category.id]: profileCandidate.id }));
+          if (selections[category.id] === profileCandidate.id) {
+            clearSelection(category.id);
+          } else {
+            setSelections((current) => ({ ...current, [category.id]: profileCandidate.id }));
+          }
           setProfileCandidate(null);
         }}
       />

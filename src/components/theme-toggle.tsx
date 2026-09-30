@@ -5,10 +5,11 @@ import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMounted } from "@/hooks/use-mounted";
 
-/** A plain light/dark flip — no "system" option in the UI. The initial
- * theme can still come from the OS preference (see ThemeProvider's
- * defaultTheme="system"), but once someone actually uses this toggle
- * they're picking one of exactly two states, not a three-way menu. */
+/** A plain light/dark flip — no "system" option in the UI. The app
+ * defaults to dark for a first-time visitor regardless of OS preference
+ * (see ThemeProvider's defaultTheme="dark") - this toggle is exactly two
+ * states, not a three-way menu, and a saved choice always overrides the
+ * default on later visits either way. */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useMounted();

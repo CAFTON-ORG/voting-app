@@ -9,6 +9,7 @@ import { getVoterParticipations } from "@/lib/voting/participation";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { getEventReadiness, getElapsedPercent, isFuture } from "@/lib/events/readiness";
 import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { formatSchedule } from "@/lib/format/datetime";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
 import { ScheduleEventForm } from "@/components/admin/schedule-event-form";
@@ -192,7 +193,7 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     <div>
                       <p className="text-xs text-muted-foreground">Opens</p>
                       <p className="text-sm font-medium">
-                        {event.votingOpensAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}
+                        {formatSchedule(event.votingOpensAt)}
                       </p>
                     </div>
                   </div>
@@ -203,7 +204,7 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
                     <div>
                       <p className="text-xs text-muted-foreground">Closes</p>
                       <p className="text-sm font-medium">
-                        {event.votingClosesAt.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })}
+                        {formatSchedule(event.votingClosesAt)}
                       </p>
                     </div>
                   </div>

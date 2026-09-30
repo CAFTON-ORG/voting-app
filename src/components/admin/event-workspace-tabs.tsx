@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -14,6 +15,7 @@ import { DataTable, SortableHeader } from "@/components/admin/data-table";
 import { EmptyState } from "@/components/admin/empty-state";
 import type { CandidateCardData } from "@/components/admin/candidate-card";
 import { getPercentageColor } from "@/lib/format/progress-color";
+import { formatDateTime } from "@/lib/format/datetime";
 import { BarChart3, Users } from "lucide-react";
 
 type CategoryOption = { id: string; name: string; candidateCount: number };
@@ -60,7 +62,7 @@ const voterColumns: ColumnDef<VoterTableRow>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-right text-muted-foreground">{row.original.votedAt.toLocaleString()}</div>
+      <div className="text-right text-muted-foreground">{formatDateTime(row.original.votedAt)}</div>
     ),
   },
 ];
@@ -198,9 +200,12 @@ export function EventWorkspaceTabs({
                       <CandidateAvatar photoUrl={candidate.photoUrl} fullName={candidate.fullName} className="size-9 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm">
+                          <Link
+                            href={`/admin/events/${eventId}/candidates/${candidate.id}`}
+                            className="truncate text-sm hover:underline hover:underline-offset-2"
+                          >
                             #{candidate.candidateNumber} {candidate.fullName}
-                          </p>
+                          </Link>
                           <div className="flex shrink-0 items-center gap-2">
                             <Badge variant="secondary">{candidate.votes} votes</Badge>
                             <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
