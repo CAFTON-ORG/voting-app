@@ -31,6 +31,8 @@ import { VotingProgress } from "./voting-progress";
 import { BallotCategorySection } from "./ballot-category-section";
 import { CandidateProfileSheet, type PublicCandidateProfile } from "./candidate-profile-sheet";
 import { PublicHeader } from "@/components/voting/public-header";
+import { PublicFooter } from "@/components/voting/public-footer";
+import { StatusCard } from "@/components/voting/status-card";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { CandidatePhoto } from "@/components/shared/candidate-photo";
 import { formatDateTime } from "@/lib/format/datetime";
@@ -265,32 +267,34 @@ export function BallotForm({
 
   if (step === "success" && submittedAt) {
     return (
-      <div className="relative flex min-h-svh flex-col">
+      <div className="relative flex min-h-svh flex-col overflow-hidden">
         <AuroraGlow />
         <PublicHeader signedInEmail={signedInEmail} signedInName={voterName} signedInAvatarUrl={voterAvatarUrl} />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-12">
           <Stepper steps={STEP_LABELS} currentStep={STEP_NUMBER.success} />
-          <div className="mx-auto mt-12 flex max-w-md flex-col items-center text-center">
-            <CheckCircle2 className="size-12 text-primary motion-safe:animate-[fade-up_0.5s_ease-out]" />
-            <h1 className="font-heading mt-6 text-2xl font-semibold text-balance">Your vote has been submitted.</h1>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Thank you for participating in <span className="font-medium text-foreground">{event.name}</span>.
-              Your ballot was securely recorded.
-            </p>
-            {reference && (
-              <div className="mt-6 rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs text-muted-foreground">Reference</p>
-                <p className="font-mono text-sm font-medium">{reference}</p>
-              </div>
-            )}
-            <p className="mt-4 text-xs text-muted-foreground">
-              Submitted {formatDateTime(new Date(submittedAt))}
-            </p>
-            <Button asChild variant="outline" className="mt-8">
-              <a href={`/events/${event.slug}`}>Return to Event</a>
-            </Button>
+          <div className="mx-auto mt-10 flex w-full max-w-sm flex-1 flex-col items-center justify-center">
+            <StatusCard
+              icon={CheckCircle2}
+              tone="success"
+              title="Your vote has been submitted."
+              description={`Thank you for participating in ${event.name}. Your ballot was securely recorded.`}
+              footer={
+                <Button asChild variant="outline" className="w-full">
+                  <a href={`/events/${event.slug}`}>Return to Event</a>
+                </Button>
+              }
+            >
+              {reference && (
+                <div className="mt-2 w-full rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="font-mono text-sm font-medium">{reference}</p>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">Submitted {formatDateTime(new Date(submittedAt))}</p>
+            </StatusCard>
           </div>
         </main>
+        <PublicFooter />
       </div>
     );
   }

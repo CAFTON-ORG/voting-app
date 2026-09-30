@@ -10,6 +10,7 @@ import { formatSchedule } from "@/lib/format/datetime";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { EventState } from "@prisma/client";
 
 /** An event with a cover image gets a real banner - name and status
@@ -125,48 +126,50 @@ export function EventHero({
       </p>
 
       {hasStatusPanel && (
-        <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-2xl border bg-card/70 px-6 py-6 shadow-sm backdrop-blur-sm">
-          {state === "SCHEDULED" && votingOpensAt && (
-            <div className="flex flex-col items-center gap-3">
+        <Card className="w-full max-w-xs">
+          <CardContent className="flex flex-col items-center gap-5">
+            {state === "SCHEDULED" && votingOpensAt && (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Voting opens <span className="font-medium text-foreground">{formatSchedule(votingOpensAt)}</span>
+                </p>
+                <VotingCountdown target={votingOpensAt} label="Voting opens in" />
+              </div>
+            )}
+
+            {state === "OPEN" && votingClosesAt && (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Voting closes <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
+                </p>
+                <VotingCountdown target={votingClosesAt} label="Voting closes in" />
+              </div>
+            )}
+
+            {(state === "CLOSED" || state === "FINALIZED") && votingClosesAt && (
               <p className="text-sm text-muted-foreground">
-                Voting opens <span className="font-medium text-foreground">{formatSchedule(votingOpensAt)}</span>
+                Voting ended <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
               </p>
-              <VotingCountdown target={votingOpensAt} label="Voting opens in" />
-            </div>
-          )}
+            )}
 
-          {state === "OPEN" && votingClosesAt && (
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-sm text-muted-foreground">
-                Voting closes <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
+            {state === "PAUSED" && (
+              <p className="text-sm text-muted-foreground">Voting is temporarily paused. Please check back shortly.</p>
+            )}
+
+            {state === "OPEN" && (
+              <Button asChild size="lg" className="w-full gap-2">
+                <Link href={`/events/${slug}/vote`}>Vote Now</Link>
+              </Button>
+            )}
+
+            {ballotCount != null && (
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{ballotCount.toLocaleString()}</span> vote
+                {ballotCount === 1 ? "" : "s"} submitted
               </p>
-              <VotingCountdown target={votingClosesAt} label="Voting closes in" />
-            </div>
-          )}
-
-          {(state === "CLOSED" || state === "FINALIZED") && votingClosesAt && (
-            <p className="text-sm text-muted-foreground">
-              Voting ended <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
-            </p>
-          )}
-
-          {state === "PAUSED" && (
-            <p className="text-sm text-muted-foreground">Voting is temporarily paused. Please check back shortly.</p>
-          )}
-
-          {state === "OPEN" && (
-            <Button asChild size="lg" className="w-full gap-2">
-              <Link href={`/events/${slug}/vote`}>Vote Now</Link>
-            </Button>
-          )}
-
-          {ballotCount != null && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">{ballotCount.toLocaleString()}</span> vote
-              {ballotCount === 1 ? "" : "s"} submitted
-            </p>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
