@@ -10,7 +10,8 @@ import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-edit-button";
 import { CandidateLifecycleActions } from "@/components/admin/candidate-lifecycle-actions";
 import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { Logo } from "@/components/shared/logo";
+import { autoCloseIfExpired } from "@/lib/events/auto-transitions";
 import { getPercentageColor } from "@/lib/format/progress-color";
 import { formatDateTime } from "@/lib/format/datetime";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,9 +49,13 @@ export default async function CandidateDetailPage(
   const canSeeVotes =
     (votingEverActive && can("VIEW_LIVE_RESULTS")) || (votingEnded && can("VIEW_FINAL_RESULTS"));
 
-  const canManageLimited = can("MANAGE_CANDIDATES_LIMITED") && candidate.event.state !== "FINALIZED";
-  const canManageFull =
-    can("MANAGE_CANDIDATES_FULL") && (candidate.event.state === "DRAFT" || candidate.event.state === "SCHEDULED");
+  // See src/app/admin/(dashboard)/events/[id]/page.tsx's own canEdit
+  // comment: candidate name/photo edits are locked once the event has
+  // ever gone live, same threshold as structural changes, not just once
+  // FINALIZED.
+  const eventIsEditable = candidate.event.state === "DRAFT" || candidate.event.state === "SCHEDULED";
+  const canManageLimited = can("MANAGE_CANDIDATES_LIMITED") && eventIsEditable;
+  const canManageFull = can("MANAGE_CANDIDATES_FULL") && eventIsEditable;
 
   const rawCategories = await prisma.candidateCategory.findMany({
     where: { eventId: id },
@@ -80,13 +85,8 @@ export default async function CandidateDetailPage(
           <CandidatePhotoLightbox photoUrl={candidate.photoUrl} fullName={candidate.fullName} />
         ) : (
           <div className="relative aspect-4/5 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-80">
-            <div className="flex size-full items-center justify-center text-4xl font-semibold text-muted-foreground">
-              {candidate.fullName
-                .split(" ")
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((p) => p[0]?.toUpperCase())
-                .join("")}
+            <div className="flex size-full items-center justify-center">
+              <Logo size={56} className="text-muted-foreground/40" />
             </div>
           </div>
         )}

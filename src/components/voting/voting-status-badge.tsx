@@ -2,8 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import type { EventState } from "@prisma/client";
 
 /** Voter-facing status language, deliberately separate from the admin
- * StatusBadge — a voter has no use for DRAFT/ARCHIVED/PAUSED distinctions,
- * only "can I vote right now or not." */
+ * StatusBadge — a voter has no use for DRAFT/ARCHIVED distinctions, and
+ * "Upcoming"/"Voting Open" reads better here than the admin's bare
+ * "Scheduled"/"Open". Colors are still the same per-state palette as the
+ * admin table's StatusBadge (see src/components/admin/status-badge.tsx),
+ * so a status reads as the same status everywhere in the app, admin view
+ * or public page. */
 export function VotingStatusBadge({ state }: { state: EventState }) {
   if (state === "OPEN") {
     return (
@@ -26,8 +30,15 @@ export function VotingStatusBadge({ state }: { state: EventState }) {
       </Badge>
     );
   }
+  if (state === "FINALIZED") {
+    return (
+      <Badge className="border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/60 dark:text-violet-300" variant="outline">
+        Results Finalized
+      </Badge>
+    );
+  }
   return (
-    <Badge variant="outline" className="text-muted-foreground">
+    <Badge className="border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300" variant="outline">
       Voting Closed
     </Badge>
   );

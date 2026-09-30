@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export type EventRow = {
   id: string;
   name: string;
+  coverImageUrl: string | null;
   state: string;
   eligibilityMode: string;
   votes: number;
@@ -45,7 +46,7 @@ const columns: ColumnDef<EventRow>[] = [
     ),
     cell: ({ row }) => (
       <Link href={`/admin/events/${row.original.id}`} className="flex items-center gap-2 font-medium hover:underline">
-        <EventAvatar name={row.original.name} size="sm" />
+        <EventAvatar name={row.original.name} coverImageUrl={row.original.coverImageUrl} size="sm" />
         {row.original.name}
       </Link>
     ),

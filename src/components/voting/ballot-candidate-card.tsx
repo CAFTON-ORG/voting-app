@@ -88,7 +88,12 @@ export function BallotCandidateCard({
           size="sm"
           className="h-auto px-0 text-xs"
           onClick={(e) => {
+            // Without stopPropagation, this click bubbles up to the outer
+            // label's own onClick (the deselect-on-reclick handler above),
+            // which would incorrectly clear the selection just because
+            // View Profile was clicked on an already-selected card.
             e.preventDefault();
+            e.stopPropagation();
             onViewProfile();
           }}
         >

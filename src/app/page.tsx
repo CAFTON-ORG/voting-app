@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -19,11 +18,11 @@ import { LogoScene } from "@/components/shared/logo-scene";
 import { Reveal } from "@/components/shared/reveal";
 import { AuroraGlow } from "@/components/shared/aurora-glow";
 import { CandidateAvatarStack } from "@/components/shared/candidate-avatar-stack";
+import { EventCoverPhoto } from "@/components/shared/event-cover-photo";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { cn } from "cn";
 import { CAFTON_WEBSITE_URL } from "@/lib/site";
-import { getAvatarColor } from "@/lib/format/avatar-color";
 import type { EventState } from "@prisma/client";
 
 const OPEN_EVENTS_ANCHOR = "open-for-voting";
@@ -66,7 +65,6 @@ function OpenEventCard({
   event: HomeEvent;
   delayMs: number;
 }) {
-  const { bg } = getAvatarColor(event.name);
   const candidateCount = event.candidates.length;
 
   return (
@@ -76,23 +74,12 @@ function OpenEventCard({
         className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-muted">
-          {event.coverImageUrl ? (
-            <Image
-              src={event.coverImageUrl}
-              alt=""
-              fill
-              sizes="(min-width: 768px) 48rem, 100vw"
-              className="object-cover"
-            />
-          ) : (
-            <div
-              aria-hidden
-              className="absolute inset-0"
-              style={{
-                background: `radial-gradient(circle at 25% 15%, ${bg}, transparent 65%)`,
-              }}
-            />
-          )}
+          <EventCoverPhoto
+            coverImageUrl={event.coverImageUrl}
+            name={event.name}
+            sizes="(min-width: 768px) 48rem, 100vw"
+            logoSize={48}
+          />
           <div
             aria-hidden
             className="absolute inset-0 bg-linear-to-t from-black/85 via-black/20 to-transparent"
@@ -145,17 +132,9 @@ function ClosedEventCard({
         href={`/events/${event.slug}`}
         className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border bg-card py-5 pr-5 pl-6 transition-colors hover:border-foreground/20"
       >
-        {event.coverImageUrl && (
-          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-16">
-            <Image
-              src={event.coverImageUrl}
-              alt=""
-              fill
-              sizes="4rem"
-              className="object-cover"
-            />
-          </div>
-        )}
+        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-16">
+          <EventCoverPhoto coverImageUrl={event.coverImageUrl} name={event.name} sizes="4rem" />
+        </div>
         <div className="min-w-0 flex-1">
           <p className="font-heading truncate text-xl font-medium sm:text-2xl">
             {event.name}

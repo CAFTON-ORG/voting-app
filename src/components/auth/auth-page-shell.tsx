@@ -69,11 +69,10 @@ export function AuthPageShell({
         {children && <CardContent className="flex flex-col gap-4">{children}</CardContent>}
         <CardFooter className="flex flex-col gap-4 border-t pt-5">
           <PartnerLogos />
-          {/* footer is an arbitrary ReactNode (plain text on most pages,
-              but SignedInBar - a <div> wrapping a sign-out <form> - on the
-              vote page's ineligible-voter state), so this must be a <div>,
-              not a <p>: a <div>/<form> nested inside a <p> is invalid HTML
-              and was causing a real hydration error. */}
+          {/* footer is an arbitrary ReactNode, so this must be a <div>, not
+              a <p>: a caller passing block content (a <div>/<form>) would
+              produce invalid HTML nested inside a <p>, the same hydration
+              bug already hit once with an earlier footer here. */}
           {footer && <div className="text-center text-xs text-muted-foreground">{footer}</div>}
           <p className="text-center text-xs text-muted-foreground">
             By signing in, you agree to how this platform handles your data — see the{" "}

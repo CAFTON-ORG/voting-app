@@ -8,7 +8,7 @@ import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { getEventReadiness, getElapsedPercent, isFuture } from "@/lib/events/readiness";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { formatSchedule } from "@/lib/format/datetime";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
@@ -42,6 +42,7 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
     },
   });
   if (!event) notFound();
+  if (await autoOpenIfDue(event)) event.state = "OPEN";
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   const ballotCount = await getBallotCount(event.id);
@@ -55,11 +56,21 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
   const canSeeVoters = can("VIEW_VOTER_LIST");
   const voters = canSeeVoters ? await getVoterParticipations(event.id) : null;
 
-  const canManageCandidatesFull =
-    (event.state === "DRAFT" || event.state === "SCHEDULED") && can("MANAGE_CANDIDATES_FULL");
-  const canManageCandidatesLimited = can("MANAGE_CANDIDATES_LIMITED") && event.state !== "FINALIZED";
+  // Both structural candidate changes AND the event's own config/candidate
+  // "limited" edits are locked once an event has ever gone live (OPEN or
+  // later) - not just once FINALIZED. Editing an event's name, allowed
+  // domains, or a candidate's displayed name/photo mid-vote is confusing
+  // at best (a voter mid-ballot sees one thing, a late arrival sees
+  // another) and looks like tampering at worst; DRAFT/SCHEDULED is the
+  // whole safe window, same threshold assertStructuralChangesAllowed
+  // already uses for structural candidate changes. Deactivating a
+  // candidate is a deliberate, separate exception (see
+  // deactivateCandidateAction) - not affected by this.
+  const eventIsEditable = event.state === "DRAFT" || event.state === "SCHEDULED";
+  const canManageCandidatesFull = eventIsEditable && can("MANAGE_CANDIDATES_FULL");
+  const canManageCandidatesLimited = eventIsEditable && can("MANAGE_CANDIDATES_LIMITED");
 
-  const canEdit = can("MANAGE_EVENT_CONFIG") && event.state !== "FINALIZED";
+  const canEdit = can("MANAGE_EVENT_CONFIG") && eventIsEditable;
   const canDelete =
     can("MANAGE_EVENT_CONFIG") &&
     ((event.state === "DRAFT" || event.state === "SCHEDULED") ||
@@ -133,7 +144,7 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <EventAvatar name={event.name} />
+          <EventAvatar name={event.name} coverImageUrl={event.coverImageUrl} />
           <h1 className="text-xl font-semibold">{event.name}</h1>
           <StatusBadge status={event.archivedAt ? "ARCHIVED" : event.state} />
         </div>
