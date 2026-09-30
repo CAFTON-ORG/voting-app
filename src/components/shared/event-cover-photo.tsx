@@ -17,7 +17,7 @@ export function EventCoverPhoto({
   sizes,
   className,
   logoSize = 28,
-  logoClassName = "text-white/50",
+  logoOpacity = 0.55,
   priority = false,
 }: {
   coverImageUrl: string | null;
@@ -28,11 +28,17 @@ export function EventCoverPhoto({
    * container (a 28px table-row chip needs a much smaller mark than a
    * full-width card banner). */
   logoSize?: number;
-  logoClassName?: string;
+  logoOpacity?: number;
   priority?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
-  const { bg } = getAvatarColor(name);
+  // getAvatarColor's bg is a fixed light wash (oklch lightness 0.9)
+  // regardless of the site's own light/dark theme, so a plain white logo
+  // is low-contrast against it either way - fg is the same hash's
+  // purpose-built dark, hue-matched companion color, guaranteed to read
+  // against this exact bg rather than assuming a color that happens to
+  // work only in one theme.
+  const { bg, fg } = getAvatarColor(name);
 
   if (!coverImageUrl) {
     return (
@@ -41,7 +47,7 @@ export function EventCoverPhoto({
         className="flex size-full items-center justify-center"
         style={{ background: `radial-gradient(circle at 30% 20%, ${bg}, transparent 65%)` }}
       >
-        <Logo size={logoSize} className={logoClassName} />
+        <Logo size={logoSize} style={{ color: fg, opacity: logoOpacity }} />
       </div>
     );
   }

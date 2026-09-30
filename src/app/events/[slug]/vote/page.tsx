@@ -3,7 +3,7 @@ import { Clock, PauseCircle, CircleCheck, CircleSlash } from "lucide-react";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { formatSchedule } from "@/lib/format/datetime";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SignedInBar } from "@/components/auth/signed-in-bar";
@@ -20,6 +20,7 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
   // round-trip from every vote-page load instead of paying for it twice.
   const [event, identity] = await Promise.all([getVotableEvent(slug), getTrustedIdentity()]);
   if (!event) notFound();
+  if (await autoOpenIfDue(event)) event.state = "OPEN";
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   if (!identity) {

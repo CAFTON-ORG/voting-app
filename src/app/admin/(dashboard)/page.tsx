@@ -2,7 +2,7 @@ import { LayoutDashboard } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/admin";
 import { roleCan } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma/client";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { getBallotCounts } from "@/lib/results/queries";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { PageTitle } from "@/components/admin/page-title";
@@ -15,11 +15,17 @@ export default async function AdminEventsPage() {
   const can = (permission: Parameters<typeof roleCan>[1]) => roleCan(admin.role, permission);
 
   const [events, teamCount] = await Promise.all([
-    prisma.event.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.event.findMany({
+      orderBy: { createdAt: "desc" },
+      // categories/candidates are only needed for autoOpenIfDue's
+      // readiness check below, not for anything this page itself renders.
+      include: { categories: { include: { candidates: { select: { isActive: true } } } } },
+    }),
     prisma.adminUser.count({ where: { active: true } }),
   ]);
   await Promise.all(
     events.map(async (event) => {
+      if (await autoOpenIfDue(event)) event.state = "OPEN";
       if (await autoCloseIfExpired(event)) event.state = "CLOSED";
     })
   );

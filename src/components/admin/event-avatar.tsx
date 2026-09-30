@@ -31,13 +31,7 @@ export function EventAvatar({
   if (coverImageUrl) {
     return (
       <div className={cn(SIZE_CLASS[size], "relative shrink-0 overflow-hidden rounded-md", className)}>
-        <EventCoverPhoto
-          coverImageUrl={coverImageUrl}
-          name={name}
-          sizes={SIZES_ATTR[size]}
-          logoSize={LOGO_SIZE[size]}
-          logoClassName="text-white/60"
-        />
+        <EventCoverPhoto coverImageUrl={coverImageUrl} name={name} sizes={SIZES_ATTR[size]} logoSize={LOGO_SIZE[size]} />
       </div>
     );
   }

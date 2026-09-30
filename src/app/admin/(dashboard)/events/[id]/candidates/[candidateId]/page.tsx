@@ -11,7 +11,7 @@ import { CandidateDetailEditButton } from "@/components/admin/candidate-detail-e
 import { CandidateLifecycleActions } from "@/components/admin/candidate-lifecycle-actions";
 import { CandidatePhotoLightbox } from "@/components/admin/candidate-photo-lightbox";
 import { Logo } from "@/components/shared/logo";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired } from "@/lib/events/auto-transitions";
 import { getPercentageColor } from "@/lib/format/progress-color";
 import { formatDateTime } from "@/lib/format/datetime";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

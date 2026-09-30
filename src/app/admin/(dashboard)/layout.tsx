@@ -21,7 +21,6 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 
 export default async function AdminDashboardLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
@@ -99,7 +98,6 @@ export default async function AdminDashboardLayout({ children }: LayoutProps<"/a
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
           <div className="max-w-sm flex-1">
             <AdminCommandMenu role={admin.role} />
           </div>

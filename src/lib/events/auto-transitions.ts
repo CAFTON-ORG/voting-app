@@ -2,6 +2,7 @@ import "server-only";
 
 import type { EventState } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
+import { getEventReadiness } from "@/lib/events/readiness";
 
 /** Voting closes itself once `votingClosesAt` passes, mirroring the manual
  * "Close Voting" transition in src/actions/events/state.ts but with no
@@ -45,6 +46,47 @@ export async function autoCloseIfExpired(event: {
     // regardless of Event.state, so a stale badge was never a path to an
     // accepted late vote, just a delayed status update, and the caller
     // already reflects the just-closed state in its own render below.
+  }
+  return count > 0;
+}
+
+/** The symmetric counterpart to autoCloseIfExpired — voting opens itself
+ * once `votingOpensAt` passes, same opportunistic/no-acting-admin pattern.
+ * Previously this was manual-only (the "Open Voting" button never checked
+ * the schedule at all, so admins could open early with no gate, and a
+ * missed scheduled time just sat there indefinitely with nothing to show
+ * for it). This closes that asymmetry: closing was already automatic,
+ * opening now is too.
+ *
+ * Requires getEventReadiness().isReady first, unlike auto-close - opening
+ * an incomplete event (no categories/candidates yet) to the public would
+ * be a real problem, not just a cosmetic one, so a SCHEDULED event whose
+ * time has passed but isn't actually ready stays SCHEDULED (overdue)
+ * until an admin fixes the setup and/or opens it manually - manual
+ * openVotingAction() enforces the exact same readiness check, so this
+ * never opens anything the manual path would have refused too. */
+export async function autoOpenIfDue(event: {
+  id: string;
+  state: EventState;
+  name: string;
+  allowedDomains: string[];
+  votingOpensAt: Date | null;
+  votingClosesAt: Date | null;
+  categories: { candidates: { isActive: boolean }[] }[];
+}): Promise<boolean> {
+  if (event.state !== "SCHEDULED") return false;
+  if (!event.votingOpensAt || event.votingOpensAt.getTime() > Date.now()) return false;
+  if (!getEventReadiness(event).isReady) return false;
+
+  const { count } = await prisma.event.updateMany({
+    where: { id: event.id, state: "SCHEDULED" },
+    data: { state: "OPEN" },
+  });
+  if (count > 0) {
+    await prisma.auditLog.create({
+      data: { eventId: event.id, actorAdminId: null, action: "VOTING_AUTO_OPENED", metadata: {} },
+    });
+    // Same reasoning as autoCloseIfExpired: no cache revalidation mid-render.
   }
   return count > 0;
 }

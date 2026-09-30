@@ -54,7 +54,7 @@ export function EventHero({
   candidateCount: number;
   coverImageUrl?: string | null;
 }) {
-  const { bg } = getAvatarColor(name);
+  const { bg, fg } = getAvatarColor(name);
   const [coverLoaded, setCoverLoaded] = useState(false);
   const hasStatusPanel =
     (state === "SCHEDULED" && votingOpensAt) ||
@@ -107,7 +107,8 @@ export function EventHero({
           <Logo
             aria-hidden
             size={64}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/25"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ color: fg, opacity: 0.35 }}
           />
           <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">

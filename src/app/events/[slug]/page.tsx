@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPublicEventDetail } from "@/lib/events/public-queries";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { getBallotCount } from "@/lib/results/queries";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { PublicHeader } from "@/components/voting/public-header";
@@ -20,11 +20,16 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   const { slug } = await props.params;
   const event = await getPublicEventDetail(slug);
   if (!event || event.state === "DRAFT") notFound();
-  // `event` comes back from unstable_cache - mutating it in place isn't
-  // something to rely on (whether that leaks into the cached value is an
-  // internal implementation detail, not a documented guarantee), so the
-  // just-closed state is tracked separately instead of writing event.state.
-  const state = (await autoCloseIfExpired(event)) ? "CLOSED" : event.state;
+  // `event` comes back from the Redis-backed public cache (see
+  // src/lib/cache/public-cache.ts) - mutating it in place isn't something
+  // to rely on (whether that leaks into the cached value is an internal
+  // implementation detail, not a documented guarantee), so the
+  // just-transitioned state is tracked separately instead of writing
+  // event.state. Checked in order: an event can't be due to both open and
+  // close at once (autoOpenIfDue only ever fires from SCHEDULED,
+  // autoCloseIfExpired only from OPEN/PAUSED), but resolving open first
+  // reads naturally as "advance state as far as reality allows".
+  const state = (await autoOpenIfDue(event)) ? "OPEN" : (await autoCloseIfExpired(event)) ? "CLOSED" : event.state;
 
   const [ballotCount, identity] = await Promise.all([
     event.showPublicBallotCount ? getBallotCount(event.id) : Promise.resolve(null),

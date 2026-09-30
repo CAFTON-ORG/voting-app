@@ -8,7 +8,7 @@ import { getBallotCount, getCandidateResults } from "@/lib/results/queries";
 import { getVoterParticipations } from "@/lib/voting/participation";
 import { getAdminIdentitiesByIds, displayName } from "@/lib/admin/queries";
 import { getEventReadiness, getElapsedPercent, isFuture } from "@/lib/events/readiness";
-import { autoCloseIfExpired } from "@/lib/events/auto-close";
+import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { formatSchedule } from "@/lib/format/datetime";
 import { EventStateActions } from "@/components/admin/event-state-actions";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
@@ -42,6 +42,7 @@ export default async function AdminEventDetailPage(props: PageProps<"/admin/even
     },
   });
   if (!event) notFound();
+  if (await autoOpenIfDue(event)) event.state = "OPEN";
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   const ballotCount = await getBallotCount(event.id);
