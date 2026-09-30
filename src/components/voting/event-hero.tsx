@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "cn";
+import { Logo } from "@/components/shared/logo";
 import { getAvatarColor } from "@/lib/format/avatar-color";
 import { formatSchedule } from "@/lib/format/datetime";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
@@ -102,6 +103,11 @@ export function EventHero({
             aria-hidden
             className="absolute inset-0"
             style={{ background: `radial-gradient(circle at 30% 20%, ${bg}, transparent 65%)` }}
+          />
+          <Logo
+            aria-hidden
+            size={64}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/25"
           />
           <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">

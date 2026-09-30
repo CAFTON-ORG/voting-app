@@ -317,7 +317,7 @@ export function BallotForm({
                         photoUrl={candidate.photoUrl}
                         fullName={candidate.fullName}
                         sizes="4rem"
-                        initialsClassName="text-lg"
+                        logoSize={24}
                       />
                     </div>
                     <div className="min-w-0 flex-1">

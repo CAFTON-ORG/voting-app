@@ -55,10 +55,12 @@ export async function createEventAction(input: unknown): Promise<ActionResult<{ 
   }
 }
 
-/** Name, allowed domains, and the public-ballot-count toggle can be
- * edited at any point before FINALIZED — none of these affect ballot
- * integrity (unlike candidates/categories, which lock once voting could
- * have started). */
+/** Name, allowed domains, and the public-ballot-count toggle are only
+ * editable pre-OPEN (DRAFT/SCHEDULED) — allowedDomains in particular is an
+ * eligibility rule, and changing who's allowed to vote (or the name
+ * ballots are cast under) mid-election is confusing at best and looks
+ * like tampering at worst. Same threshold assertStructuralChangesAllowed
+ * already uses for candidates/categories. */
 export async function editEventAction(input: unknown): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_EVENT_CONFIG");
@@ -66,8 +68,8 @@ export async function editEventAction(input: unknown): Promise<ActionResult> {
 
     const event = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findUniqueOrThrow({ where: { id: data.eventId } });
-      if (event.state === "FINALIZED") {
-        throw new Error("This event's results have been finalized and its details are frozen.");
+      if (event.state !== "DRAFT" && event.state !== "SCHEDULED") {
+        throw new Error("An event's details can only be edited before voting opens.");
       }
       await tx.event.update({
         where: { id: data.eventId },

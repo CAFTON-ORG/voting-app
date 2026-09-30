@@ -62,7 +62,8 @@ function WinnerCard({ winner }: { winner: ResultCandidate }) {
             fullName={winner.fullName}
             sizes="12rem"
             className="bg-neutral-800"
-            initialsClassName="text-4xl text-white"
+            logoSize={56}
+            logoClassName="text-white/70"
           />
         </div>
         <div className="absolute -top-3 left-1/2 flex size-11 -translate-x-1/2 items-center justify-center rounded-full bg-amber-400 text-neutral-950 shadow-lg">
@@ -95,7 +96,8 @@ function RunnerUpRow({ candidate }: { candidate: ResultCandidate }) {
           photoUrl={candidate.photoUrl}
           fullName={candidate.fullName}
           sizes="2.75rem"
-          initialsClassName="text-sm text-white/70"
+          logoSize={20}
+          logoClassName="text-white/50"
         />
       </div>
       <div className="min-w-0">

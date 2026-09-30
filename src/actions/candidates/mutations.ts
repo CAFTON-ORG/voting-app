@@ -337,9 +337,14 @@ export async function deleteCandidateAction(candidateId: string): Promise<Action
   }
 }
 
-/** Non-structural edits (name, program/year, photo, display order) — safe
- * at any point except after FINALIZED, when the event record is frozen.
- * Does NOT touch candidateNumber, category, or active status. */
+/** Non-structural edits (name, program/year, photo, display order) — only
+ * safe pre-OPEN (DRAFT/SCHEDULED), same threshold as structural changes
+ * (assertStructuralChangesAllowed above). A voter mid-ballot and a voter
+ * arriving five minutes later could otherwise see a different name/photo
+ * for the exact same candidate they're both choosing between. Does NOT
+ * touch candidateNumber, category, or active status — deactivating a
+ * candidate stays allowed during OPEN voting on purpose (see
+ * deactivateCandidateAction's own comment). */
 export async function updateCandidateLimitedAction(input: unknown): Promise<ActionResult> {
   try {
     const admin = await requirePermission("MANAGE_CANDIDATES_LIMITED");
@@ -348,8 +353,8 @@ export async function updateCandidateLimitedAction(input: unknown): Promise<Acti
     await prisma.$transaction(async (tx) => {
       const candidate = await tx.candidate.findUniqueOrThrow({ where: { id: data.candidateId } });
       const event = await tx.event.findUniqueOrThrow({ where: { id: candidate.eventId } });
-      if (event.state === "FINALIZED") {
-        throw new Error("This event's results have been finalized and its candidates are frozen.");
+      if (event.state !== "DRAFT" && event.state !== "SCHEDULED") {
+        throw new Error("A candidate's details can only be edited before voting opens.");
       }
 
       await tx.candidate.update({

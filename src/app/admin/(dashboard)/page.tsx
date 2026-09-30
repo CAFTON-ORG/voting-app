@@ -32,6 +32,7 @@ export default async function AdminEventsPage() {
     return {
       id: event.id,
       name: event.name,
+      coverImageUrl: event.coverImageUrl,
       state: event.state,
       eligibilityMode: event.eligibilityMode,
       votes,

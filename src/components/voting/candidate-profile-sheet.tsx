@@ -58,7 +58,7 @@ export function CandidateProfileSheet({
                   photoUrl={candidate.photoUrl}
                   fullName={candidate.fullName}
                   sizes="(min-width: 640px) 28rem, 100vw"
-                  initialsClassName="text-5xl"
+                  logoSize={64}
                 />
               </div>
 
