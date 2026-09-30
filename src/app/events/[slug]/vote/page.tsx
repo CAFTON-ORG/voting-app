@@ -1,17 +1,16 @@
 import { notFound } from "next/navigation";
-import { Clock, PauseCircle, CircleCheck, CircleSlash } from "lucide-react";
+import { Clock, PauseCircle, CircleCheck, CircleSlash, ShieldX } from "lucide-react";
 import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
 import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
 import { formatSchedule } from "@/lib/format/datetime";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { SignedInBar } from "@/components/auth/signed-in-bar";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { BallotForm } from "@/components/voting/ballot-form";
 import { VotingUnavailableState } from "@/components/voting/voting-unavailable-state";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 export default async function VotePage(props: PageProps<"/events/[slug]/vote">) {
   const { slug } = await props.params;
@@ -24,36 +23,41 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
   if (await autoCloseIfExpired(event)) event.state = "CLOSED";
 
   if (!identity) {
+    const signInDescription =
+      event.allowedDomains.length === 1
+        ? `Sign in with your @${event.allowedDomains[0]} account to vote.`
+        : "Sign in with an eligible account to vote.";
     return (
-      <AuthPageShell title={event.name} description="Sign in with your University of Baguio account to vote." backHref={`/events/${slug}`}>
+      <AuthPageShell title={event.name} description={signInDescription} backHref={`/events/${slug}`}>
         <GoogleSignInButton redirectTo={`/events/${slug}/vote`} />
       </AuthPageShell>
     );
   }
 
   if (!isAllowedVoterEmail(identity.email, event.allowedDomains)) {
-    // AuthPageShell has no site header/account menu of its own (it's also
-    // used pre-sign-in, where there's no identity to show one for) - this
-    // is the one branch here where SignedInBar's sign-out link is the only
-    // way out for a signed-in-but-ineligible voter, so it stays. Every
-    // other branch below renders through VotingUnavailableState, which
-    // does have PublicHeader's own account menu, making a second sign-out
-    // link here redundant - see NavUserPopover.
-    const redirectTo = `/events/${slug}/vote`;
     return (
-      <AuthPageShell
-        title={event.name}
-        footer={<SignedInBar email={identity.email} redirectTo={redirectTo} />}
-        backHref={`/events/${slug}`}
+      <VotingUnavailableState
+        icon={ShieldX}
+        tone="destructive"
+        title="Not eligible to vote"
+        description={`${identity.email} isn't on the list of accounts eligible for ${event.name}.`}
+        signedInEmail={identity.email}
+        signedInName={identity.fullName}
+        signedInAvatarUrl={identity.avatarUrl}
       >
-        <Alert variant="destructive">
-          <AlertTitle>Not eligible</AlertTitle>
-          <AlertDescription>
-            Only University of Baguio accounts (@s.ubaguio.edu or @e.ubaguio.edu) can vote in this
-            event.
-          </AlertDescription>
-        </Alert>
-      </AuthPageShell>
+        <div className="mt-1 flex flex-col items-center gap-2">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Eligible account{event.allowedDomains.length === 1 ? "" : "s"}
+          </p>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {event.allowedDomains.map((domain) => (
+              <Badge key={domain} variant="secondary" className="font-mono">
+                @{domain}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </VotingUnavailableState>
     );
   }
 

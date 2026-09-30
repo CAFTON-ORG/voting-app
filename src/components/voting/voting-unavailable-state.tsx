@@ -10,6 +10,7 @@ const TONE_STYLES: Record<string, string> = {
   success: "bg-green-50 text-green-600 dark:bg-green-950/60 dark:text-green-300",
   warning: "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
   info: "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300",
+  destructive: "bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-300",
   neutral: "bg-muted text-muted-foreground",
 };
 
@@ -32,7 +33,7 @@ export function VotingUnavailableState({
   signedInAvatarUrl,
 }: {
   icon: LucideIcon;
-  tone?: "success" | "warning" | "info" | "neutral";
+  tone?: "success" | "warning" | "info" | "destructive" | "neutral";
   title: string;
   // Plain string, deliberately not ReactNode: this renders inside a <p>,
   // and block content (a <div>/<form>) nested in a <p> is invalid HTML
