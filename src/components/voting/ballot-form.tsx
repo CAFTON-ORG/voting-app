@@ -284,6 +284,41 @@ export function BallotForm({
                 </Button>
               }
             >
+              {/* A voter seeing their own just-cast selections, in their
+                  own private session, right after submitting - this is
+                  not a ballot-secrecy concern (secrecy protects a voter's
+                  choices from OTHER people, not from the voter who made
+                  them), same reasoning as the Review step one screen ago.
+                  Nothing here is newly disclosed or persisted anywhere -
+                  `selections` is the same client-side state the voter
+                  already built while filling out the ballot. */}
+              <div className="mt-2 flex w-full flex-col gap-2">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your selections</p>
+                {event.categories.map((category) => {
+                  const candidate = category.candidates.find((c) => c.id === selections[category.id]);
+                  if (!candidate) return null;
+                  return (
+                    <div key={category.id} className="flex items-center gap-3 rounded-lg border p-2 text-left">
+                      <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                        <CandidatePhoto
+                          photoUrl={candidate.photoUrl}
+                          fullName={candidate.fullName}
+                          sizes="2.5rem"
+                          logoSize={16}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                          {category.name}
+                        </p>
+                        <p className="truncate text-sm font-medium">
+                          #{candidate.candidateNumber} {candidate.fullName}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               {reference && (
                 <div className="mt-2 w-full rounded-lg border bg-muted/30 px-4 py-3">
                   <p className="text-xs text-muted-foreground">Reference</p>
