@@ -52,3 +52,26 @@ export function getElapsedPercent(opensAt: Date, closesAt: Date): number | null 
 export function isFuture(date: Date): boolean {
   return date.getTime() > Date.now();
 }
+
+/** Whether a vote could actually be cast right now - the same schedule
+ * bounds cast_ballot() itself enforces (see the SQL function's own
+ * voting_opens_at/voting_closes_at checks), re-derived here so every
+ * page that decides whether to show "Vote Now" uses the identical
+ * criteria the database will actually accept, not just Event.state.
+ *
+ * state === "OPEN" alone isn't sufficient: an admin can open voting
+ * manually at any point during SCHEDULED, before votingOpensAt arrives
+ * (there's no gate preventing that, by design - see EventStateActions).
+ * Without this check, a voter could see a "Vote Now" button, complete an
+ * entire ballot, and only then be rejected by cast_ballot() at the very
+ * last step - confusing, and indistinguishable from an actual bug. */
+export function isVotingActuallyOpen(event: {
+  state: string;
+  votingOpensAt: Date | null;
+  votingClosesAt: Date | null;
+}): boolean {
+  if (event.state !== "OPEN") return false;
+  if (event.votingOpensAt && isFuture(event.votingOpensAt)) return false;
+  if (event.votingClosesAt && !isFuture(event.votingClosesAt)) return false;
+  return true;
+}
