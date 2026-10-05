@@ -4,6 +4,7 @@ import { getTrustedIdentity } from "@/lib/auth/identity";
 import { isAllowedVoterEmail } from "@/lib/auth/eligibility";
 import { getVotableEvent, hasVoterParticipated } from "@/lib/voting/queries";
 import { autoCloseIfExpired, autoOpenIfDue } from "@/lib/events/auto-transitions";
+import { isVotingActuallyOpen } from "@/lib/events/readiness";
 import { formatSchedule } from "@/lib/format/datetime";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
@@ -61,7 +62,19 @@ export default async function VotePage(props: PageProps<"/events/[slug]/vote">) 
     );
   }
 
-  if (event.state === "SCHEDULED") {
+  // Admins can open voting manually at any point during SCHEDULED, before
+  // votingOpensAt arrives (there's no gate preventing that - only auto-open
+  // is schedule-gated). So state === "OPEN" alone doesn't guarantee voting
+  // has actually started yet - the SAME schedule bounds cast_ballot()
+  // itself enforces have to be checked here too, or a voter can select
+  // candidates, review, and submit, only to be rejected at the very last
+  // step with a Postgres error that looks like a bug rather than "it's not
+  // time yet." Showing the identical SCHEDULED experience in that case
+  // (rather than something that implies the backend rejected them) is
+  // accurate: from the voter's perspective it isn't open, regardless of
+  // what an admin clicked early.
+  const notYetOpen = event.state === "SCHEDULED" || (event.state === "OPEN" && !isVotingActuallyOpen(event));
+  if (notYetOpen) {
     return (
       <VotingUnavailableState
         icon={Clock}

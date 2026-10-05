@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requirePermission } from "@/lib/auth/admin";
-import { getEventReadiness } from "@/lib/events/readiness";
+import { getEventReadiness, isFuture } from "@/lib/events/readiness";
 import { invalidatePublicHomeCache, invalidatePublicEventCache } from "@/lib/cache/public-cache";
 import { ok, fail, toFriendlyMessage, type ActionResult } from "@/lib/actions/result";
 
@@ -34,7 +34,23 @@ export async function openVotingAction(eventId: string): Promise<ActionResult> {
         const missing = readiness.items.filter((item) => !item.complete).map((item) => item.label);
         throw new Error(`This event isn't ready to open: ${missing.join("; ")}.`);
       }
-      await tx.event.update({ where: { id: eventId }, data: { state: "OPEN" } });
+      // Opening early (nothing stops an admin from clicking this before
+      // votingOpensAt arrives) is a deliberate "start now" override, same
+      // as starting a scheduled webinar early - the record should reflect
+      // when voting actually started, not a stale future timestamp that
+      // now contradicts the event's own state. Every public/voter-facing
+      // page treats state === "OPEN" with a still-future votingOpensAt as
+      // not actually open yet (see isVotingActuallyOpen), so leaving the
+      // old value in place would otherwise still block real votes despite
+      // this action having just "opened" it. votingClosesAt is left alone
+      // - opening early extends the window, it doesn't compress it.
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          state: "OPEN",
+          votingOpensAt: event.votingOpensAt && isFuture(event.votingOpensAt) ? new Date() : event.votingOpensAt,
+        },
+      });
       await tx.auditLog.create({
         data: { eventId, actorAdminId: admin.adminUserId, action: "VOTING_OPENED", metadata: {} },
       });

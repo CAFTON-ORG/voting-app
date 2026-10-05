@@ -11,6 +11,7 @@ import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
 import { VotingCountdown } from "@/components/voting/voting-countdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { isVotingActuallyOpen } from "@/lib/events/readiness";
 import type { EventState } from "@prisma/client";
 
 /** An event with a cover image gets a real banner - name and status
@@ -57,12 +58,27 @@ export function EventHero({
 }) {
   const { bg, fg } = getAvatarColor(name);
   const [coverLoaded, setCoverLoaded] = useState(false);
+
+  // Admins can open voting manually at any point during SCHEDULED, before
+  // votingOpensAt arrives - there's no gate preventing that. So
+  // state === "OPEN" alone doesn't mean a vote would actually be accepted
+  // right now; the same schedule bounds cast_ballot() itself enforces
+  // have to be checked here too, or this card would show "Vote Now" (and
+  // a countdown to the wrong deadline) for an event that isn't really
+  // open yet - see src/app/events/[slug]/vote/page.tsx's own version of
+  // this same check.
+  const effectivelyOpen = isVotingActuallyOpen({ state, votingOpensAt, votingClosesAt });
+  const notYetOpen = state === "SCHEDULED" || (state === "OPEN" && !effectivelyOpen);
+  // Shown as "Upcoming", same as a genuinely SCHEDULED event - from a
+  // voter's perspective there's no difference between the two.
+  const displayState: EventState = notYetOpen && state === "OPEN" ? "SCHEDULED" : state;
+
   const hasStatusPanel =
-    (state === "SCHEDULED" && votingOpensAt) ||
-    (state === "OPEN" && votingClosesAt) ||
+    (notYetOpen && votingOpensAt) ||
+    (effectivelyOpen && votingClosesAt) ||
     ((state === "CLOSED" || state === "FINALIZED") && votingClosesAt) ||
     state === "PAUSED" ||
-    state === "OPEN" ||
+    effectivelyOpen ||
     ballotCount != null;
 
   return (
@@ -95,7 +111,7 @@ export function EventHero({
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">
             {organizer && <p className="text-sm font-medium text-white/80">{organizer}</p>}
             <h1 className="font-heading text-2xl font-semibold text-balance text-white sm:text-4xl">{name}</h1>
-            <VotingStatusBadge state={state} />
+            <VotingStatusBadge state={displayState} />
           </div>
         </div>
       ) : (
@@ -115,7 +131,7 @@ export function EventHero({
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-6 pb-6 text-center">
             {organizer && <p className="text-sm font-medium text-white/80">{organizer}</p>}
             <h1 className="font-heading text-2xl font-semibold text-balance text-white sm:text-4xl">{name}</h1>
-            <VotingStatusBadge state={state} />
+            <VotingStatusBadge state={displayState} />
           </div>
         </div>
       )}
@@ -128,7 +144,7 @@ export function EventHero({
       {hasStatusPanel && (
         <Card className="w-full max-w-xs">
           <CardContent className="flex flex-col items-center gap-5">
-            {state === "SCHEDULED" && votingOpensAt && (
+            {notYetOpen && votingOpensAt && (
               <div className="flex flex-col items-center gap-3">
                 <p className="text-sm text-muted-foreground">
                   Voting opens <span className="font-medium text-foreground">{formatSchedule(votingOpensAt)}</span>
@@ -137,7 +153,7 @@ export function EventHero({
               </div>
             )}
 
-            {state === "OPEN" && votingClosesAt && (
+            {effectivelyOpen && votingClosesAt && (
               <div className="flex flex-col items-center gap-3">
                 <p className="text-sm text-muted-foreground">
                   Voting closes <span className="font-medium text-foreground">{formatSchedule(votingClosesAt)}</span>
@@ -156,7 +172,7 @@ export function EventHero({
               <p className="text-sm text-muted-foreground">Voting is temporarily paused. Please check back shortly.</p>
             )}
 
-            {state === "OPEN" && (
+            {effectivelyOpen && (
               <Button asChild size="lg" className="w-full gap-2">
                 <Link href={`/events/${slug}/vote`}>Vote Now</Link>
               </Button>

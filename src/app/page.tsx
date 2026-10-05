@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getPublicHomeEvents } from "@/lib/events/public-queries";
 import { getTrustedIdentity } from "@/lib/auth/identity";
+import { isVotingActuallyOpen } from "@/lib/events/readiness";
 import { PublicHeader } from "@/components/voting/public-header";
 import { PublicFooter } from "@/components/voting/public-footer";
 import { VotingStatusBadge } from "@/components/voting/voting-status-badge";
@@ -161,8 +162,17 @@ export default async function Home() {
     getPublicHomeEvents(),
     getTrustedIdentity(),
   ]);
-  const openEvents = allEvents.filter((e) => e.state === "OPEN");
-  const pastEvents = allEvents.filter((e) => e.state !== "OPEN");
+  // Admins can open voting manually at any point during SCHEDULED, before
+  // votingOpensAt arrives - there's no gate preventing that. An event in
+  // that state isn't actually votable yet, so it's excluded here exactly
+  // like a genuinely SCHEDULED event already is (getPublicHomeEvents only
+  // ever queries OPEN/CLOSED/FINALIZED) - showing a "Vote Now" card for
+  // something cast_ballot() would reject, or filing it under "Voting
+  // closed" when it hasn't even started, would both be wrong. See
+  // src/components/voting/event-hero.tsx's own version of this check.
+  const visibleEvents = allEvents.filter((e) => e.state !== "OPEN" || isVotingActuallyOpen(e));
+  const openEvents = visibleEvents.filter((e) => e.state === "OPEN");
+  const pastEvents = visibleEvents.filter((e) => e.state !== "OPEN");
 
   // Deliberately no votes-cast figure here: an event's own ballot count is
   // opt-in (Event.showPublicBallotCount), and summing across all of them
