@@ -86,17 +86,25 @@ export function PublicFooter() {
 
         <div className="flex flex-col items-center gap-1.5 border-t pt-6 text-center sm:flex-row sm:justify-between sm:text-left">
           <p className="text-xs text-muted-foreground">University of Baguio · School of Information Technology</p>
-          <p className="text-xs text-muted-foreground">
-            Voting Technology Partner —{" "}
-            <a
-              href={CAFTON_WEBSITE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/privacy"
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              CAFTON
-            </a>
-          </p>
+              Privacy Notice
+            </Link>
+            <p className="text-xs text-muted-foreground">
+              Voting Technology Partner —{" "}
+              <a
+                href={CAFTON_WEBSITE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+              >
+                CAFTON
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
