@@ -59,8 +59,8 @@ export default function PrivacyPage() {
             <h2 className="font-heading text-lg font-semibold">Questions</h2>
             <p className="mt-2 text-muted-foreground">
               Questions about this notice can be directed to your event administrator, or to{" "}
-              <a href="mailto:privacy@cafton.com" className="underline underline-offset-2 hover:text-foreground">
-                privacy@cafton.com
+              <a href="mailto:contact@cafton.com" className="underline underline-offset-2 hover:text-foreground">
+                contact@cafton.com
               </a>
               .
             </p>
