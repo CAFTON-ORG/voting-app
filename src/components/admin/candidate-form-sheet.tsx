@@ -55,7 +55,7 @@ function parseProgramYear(programYear: string): { course: string; yearLevel: str
   };
 }
 
-function composeProgramYear(course: string, yearLevel: string): string | undefined {
+function composeProgramYear(course: string | undefined, yearLevel: string | undefined): string | undefined {
   if (course && yearLevel) return `${course} - ${yearLevel}`;
   return course || yearLevel || undefined;
 }
@@ -75,8 +75,8 @@ const candidateFormSchema = z.object({
     z.coerce.number().int().positive("Must be a positive number").optional()
   ),
   fullName: z.string().trim().min(1, "Full name is required").max(200, "Keep it under 200 characters"),
-  course: z.string().trim().min(1, "Course is required"),
-  yearLevel: z.string().trim().min(1, "Year level is required"),
+  course: z.string().trim().optional(),
+  yearLevel: z.string().trim().optional(),
 });
 // candidateNumber is z.coerce.number(), so its *input* type (what the raw
 // <input> can hand the resolver, including an in-progress empty string) is
@@ -226,12 +226,12 @@ export function CandidateFormSheet({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit, () => {
-              // With course/year now required, a submit blocked purely by
-              // client-side validation (as opposed to a server rejection,
-              // which already shows via the root-error banner below) had
+              // A submit blocked purely by client-side validation (e.g. a
+              // missing full name) - as opposed to a server rejection,
+              // which already shows via the root-error banner below - had
               // no top-level feedback at all - just small text under
-              // whichever fields were empty, easy to miss in a sidebar
-              // form. This makes "why isn't this submitting" impossible to
+              // whichever field was empty, easy to miss in a sidebar form.
+              // This makes "why isn't this submitting" impossible to
               // mistake for the button being broken.
               toast.error("Please fill in the highlighted fields before continuing.");
             })}
