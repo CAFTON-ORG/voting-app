@@ -91,7 +91,7 @@ export function PublicFooter() {
               href="/privacy"
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              Privacy Notice
+              Privacy Policy
             </Link>
             <p className="text-xs text-muted-foreground">
               Voting Technology Partner —{" "}

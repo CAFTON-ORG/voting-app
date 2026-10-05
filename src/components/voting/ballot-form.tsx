@@ -215,7 +215,7 @@ export function BallotForm({
                 onClick={() => setPrivacyOpen(true)}
                 className="underline underline-offset-2 hover:text-foreground"
               >
-                Privacy Notice
+                Privacy Policy
               </button>
               .
             </p>
@@ -227,7 +227,7 @@ export function BallotForm({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ScrollText className="size-4.5" />
-                Privacy Notice
+                Privacy Policy
               </DialogTitle>
               <DialogDescription>What this election collects, and how your vote stays anonymous.</DialogDescription>
             </DialogHeader>

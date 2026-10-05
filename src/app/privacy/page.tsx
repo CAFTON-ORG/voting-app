@@ -9,7 +9,7 @@ import { PublicFooter } from "@/components/voting/public-footer";
 // see Google's "App Privacy Policy" verification guidance. Every section
 // below maps directly to one of that guidance's required disclosures.
 export const metadata = {
-  title: "Privacy Notice — Cafton Voting",
+  title: "Privacy Policy — Cafton Voting",
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
     <div className="flex min-h-svh flex-col">
       <PublicHeader />
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
-        <h1 className="font-heading text-3xl font-bold tracking-tight">Privacy Notice</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">Privacy Policy</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated October 2026</p>
         <p className="mt-4 text-sm text-muted-foreground">
           This notice describes how <strong className="text-foreground">Cafton Voting</strong>, operated by{" "}
