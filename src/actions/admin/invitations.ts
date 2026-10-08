@@ -200,6 +200,32 @@ export async function deactivateAdminAction(adminUserId: string): Promise<Action
   }
 }
 
+/** The reverse of deactivateAdminAction - e.g. a member was removed by
+ * mistake, or is rejoining. Same canManageRole() check as deactivate: an
+ * ADMIN can reactivate a MODERATOR/AUDITOR, never another ADMIN. */
+export async function reactivateAdminAction(adminUserId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePermission("MANAGE_ADMIN_USERS");
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.adminUser.findUniqueOrThrow({ where: { id: adminUserId } });
+      if (!canManageRole(admin.role, existing.role)) {
+        throw new Error("You can't restore this member.");
+      }
+      const target = await tx.adminUser.update({ where: { id: adminUserId }, data: { active: true } });
+      await tx.auditLog.create({
+        data: {
+          actorAdminId: admin.adminUserId,
+          action: "ADMIN_REACTIVATED",
+          metadata: { targetAdminUserId: target.id },
+        },
+      });
+    });
+    return ok(undefined);
+  } catch (err) {
+    return fail(toFriendlyMessage(err, "Could not restore this member."));
+  }
+}
+
 /** Extends the expiry on the existing pending row and, if Resend is
  * configured, actually re-sends the invite email — before Resend, this
  * only ever extended the expiry window (invitees got the accept link

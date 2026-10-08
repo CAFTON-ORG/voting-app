@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
-import { RotateCw, X, UserMinus } from "lucide-react";
+import { RotateCw, X, UserMinus, UserCheck } from "lucide-react";
 import { UserAvatar } from "@/components/admin/user-avatar";
 import { StatusBadge, type StatusBadgeStatus } from "@/components/admin/status-badge";
 import { DataTableRowActions } from "@/components/admin/data-table-row-actions";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   updateAdminRoleAction,
   deactivateAdminAction,
+  reactivateAdminAction,
   resendInvitationAction,
   cancelInvitationAction,
 } from "@/actions/admin/invitations";
@@ -127,24 +128,41 @@ export function MembersTable({ data, viewerRole }: { data: MemberRow[]; viewerRo
           <div className="flex justify-end">
             <DataTableRowActions>
               {member.kind === "member" ? (
-                <ConfirmDialog
-                  trigger={
-                    <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
-                      <UserMinus className="size-4" />
-                      Remove member
-                    </DropdownMenuItem>
-                  }
-                  title={`Remove ${member.fullName || member.email}?`}
-                  description="They immediately lose admin access. Their history (audit entries, events they created) is kept."
-                  confirmLabel="Remove"
-                  variant="destructive"
-                  onConfirm={async () => {
-                    const result = await deactivateAdminAction(member.id);
-                    if (!result.ok) throw new Error(result.message);
-                    toast.success("Member removed");
-                    router.refresh();
-                  }}
-                />
+                member.status === "ACTIVE" ? (
+                  <ConfirmDialog
+                    trigger={
+                      <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                        <UserMinus className="size-4" />
+                        Remove member
+                      </DropdownMenuItem>
+                    }
+                    title={`Remove ${member.fullName || member.email}?`}
+                    description="They immediately lose admin access. Their history (audit entries, events they created) is kept."
+                    confirmLabel="Remove"
+                    variant="destructive"
+                    onConfirm={async () => {
+                      const result = await deactivateAdminAction(member.id);
+                      if (!result.ok) throw new Error(result.message);
+                      toast.success("Member removed");
+                      router.refresh();
+                    }}
+                  />
+                ) : (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const result = await reactivateAdminAction(member.id);
+                      if (result.ok) {
+                        toast.success("Member reactivated");
+                        router.refresh();
+                      } else {
+                        toast.error(result.message);
+                      }
+                    }}
+                  >
+                    <UserCheck className="size-4" />
+                    Reactivate member
+                  </DropdownMenuItem>
+                )
               ) : (
                 <>
                   <DropdownMenuItem
