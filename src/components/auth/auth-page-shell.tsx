@@ -81,7 +81,7 @@ export function AuthPageShell({
               onClick={() => setPrivacyOpen(true)}
               className="underline underline-offset-2 hover:text-foreground"
             >
-              Privacy Notice
+              Privacy Policy
             </button>
             .
           </p>
@@ -93,7 +93,7 @@ export function AuthPageShell({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ScrollText className="size-4.5" />
-              Privacy Notice
+              Privacy Policy
             </DialogTitle>
             <DialogDescription>What signing in shares, and how it&apos;s used.</DialogDescription>
           </DialogHeader>
